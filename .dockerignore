@@ -1,0 +1,26 @@
+# Exclude unnecessary files to speed up the build
+.git
+.github
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.venv
+.pytest_cache/
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+node_modules/
+temp/
+*.mp4
+*.wav
+*.mp3

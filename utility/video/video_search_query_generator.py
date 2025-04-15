@@ -5,7 +5,7 @@ import re
 from datetime import datetime
 from utility.utils import log_response,LOG_TYPE_GPT
 
-if len(os.environ.get("GROQ_API_KEY")) > 30:
+if len(os.environ.get("GROQ_API_KEY", "")) > 30:
     from groq import Groq
     model = "llama3-70b-8192"
     client = Groq(
@@ -13,7 +13,7 @@ if len(os.environ.get("GROQ_API_KEY")) > 30:
         )
 else:
     model = "gpt-4o"
-    OPENAI_API_KEY = os.environ.get('OPENAI_KEY')
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')  # Updated from OPENAI_KEY
     client = OpenAI(api_key=OPENAI_API_KEY)
 
 log_directory = ".logs/gpt_logs"

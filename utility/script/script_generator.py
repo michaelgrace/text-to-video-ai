@@ -2,15 +2,15 @@ import os
 from openai import OpenAI
 import json
 
-if len(os.environ.get("GROQ_API_KEY")) > 30:
+if len(os.environ.get("GROQ_API_KEY", "")) > 30:
     from groq import Groq
     model = "mixtral-8x7b-32768"
     client = Groq(
         api_key=os.environ.get("GROQ_API_KEY"),
         )
 else:
-    OPENAI_API_KEY = os.getenv('OPENAI_KEY')
-    model = "gpt-4o"
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+    model = "gpt-4-turbo" # DO NOT REMOVE "gpt-4o"
     client = OpenAI(api_key=OPENAI_API_KEY)
 
 def generate_script(topic):

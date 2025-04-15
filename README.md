@@ -31,7 +31,29 @@ pip install -r requirements.text
 python app.py "Topic name"
 ```
 
-Output will be generated in rendered_video.mp4
+The `python app.py "Topic name"` command runs the `app.py` Python script with a text argument ("Topic name"), which generates a video based on the provided topic. The output will be a file named `rendered_video.mp4`.
+
+### Using Docker (Recommended)
+
+You can also run the application using Docker, which ensures all dependencies are properly installed:
+
+1. Set your API keys in a terminal:
+   ```
+   export OPENAI_KEY="your-openai-key"
+   export PEXELS_KEY="your-pexels-key"
+   ```
+
+2. Run using docker-compose:
+   ```
+   docker-compose up --build
+   ```
+
+3. To specify a custom topic:
+   ```
+   TOPIC="Your Custom Topic" docker-compose up --build
+   ```
+
+The generated video will be available as `rendered_video.mp4` in your project directory.
 
 ### Quick Start
 

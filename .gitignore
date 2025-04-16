@@ -17,6 +17,7 @@ venv/
 # Output directories
 output/
 temp/
+docs/
 
 # OS files
 .DS_Store

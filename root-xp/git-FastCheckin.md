@@ -1,4 +1,9 @@
 To remove upstream and manage your repository privacy, here's what you need to do:
+## Manual log of changes
+
+4/16/2025 2:01 pm Stablized app after docker conversion: had to roll back some file management changes that led to isolating the blocking issue that broke the video gen. 
+- RESTORE HASH: 37b71ee55e664a93470fd1b9dcc6d49386e79af0
+
 
 ## Remove Upstream Permanently
 

@@ -63,26 +63,6 @@ Must preserve:
 5. If there are multiple approaches possible, ASK before implementing
 6. Test with Docker builds
 
-### Git Commit Process
-When clicking the COMMIT button in your IDE:
-1. Local Changes:
-   - Staged changes are committed to your local repository
-   - A commit hash is generated
-   - Your local branch is updated
-
-2. Remote Sync Required:
-   - Changes are NOT automatically pushed to remote
-   - You must explicitly PUSH to sync with remote:
-     ```bash
-     git push origin <branch-name>
-     ```
-   - Or use your IDE's "Push" button/command
-
-3. Best Practices:
-   - Write clear commit messages
-   - Pull before pushing to avoid conflicts
-   - Verify changes are pushed using GitHub web interface
-
 ## Why These Guidelines Matter
 
 These instructions exist to:

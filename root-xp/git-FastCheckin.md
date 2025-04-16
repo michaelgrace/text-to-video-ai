@@ -49,6 +49,50 @@ git commit -m "Fix MoviePy ImageMagick integration and improve captions configur
 # Push to main branch
 git push origin main
 ```
+To get the hash of your most recent commit (check-in) in Git, you can use the following command in your terminal:
+
+```bash
+git rev-parse HEAD
+```
+
+This will output the full SHA-1 hash of the current HEAD commit.
+
+If you want a shorter version of the hash, you can use:
+
+```bash
+git rev-parse --short HEAD
+```
+
+This will give you a shorter (usually 7 characters) version of the hash that is often sufficient for reference purposes.
+
+
+To retrieve all the code from a specific commit hash in Git, you can use the following approaches:
+
+1. View the files at that specific commit:
+
+```bash
+git show 2b28f6287083d7da378ef389117257d13f655d6b
+```
+
+2. Checkout the specific commit to a new branch (to explore it without affecting your current branch):
+
+```bash
+git checkout -b temp-branch 2b28f6287083d7da378ef389117257d13f655d6b
+```
+
+3. Extract all files from that commit to a directory:
+
+```bash
+git archive --format=zip 2b28f6287083d7da378ef389117257d13f655d6b --output=d:/live/Documents/GitHub/Text-To-Video-AI/commit-files.zip
+```
+
+4. To see the differences between that commit and its parent:
+
+```bash
+git diff 2b28f6287083d7da378ef389117257d13f655d6b^..2b28f6287083d7da378ef389117257d13f655d6b
+```
+
+The most common approach is option 2 (creating a temporary branch) if you want to explore the codebase at that point in time.
 
 ## Regarding Repository Privacy
 
@@ -91,64 +135,6 @@ You only need to add the upstream remote if you want to:
 
 If you're planning to develop independently without merging changes from the original project, you don't need to add the upstream remote back.
 
-
-## Note: Troubleshooting
-
-# How to Fix the Git Push Issue After Adding .env to .gitignore
-
-Even though you've added `.env` to your `.gitignore`, Git is still tracking the file because it was previously committed. You need to remove it from Git's tracking while keeping the local file.
-
-## Solution Steps
-
-### 1. Remove the .env file from Git's tracking (but keep it locally)
-
-```bash
-# Remove .env from Git tracking but keep the local file
-git rm --cached .env
-
-# Verify it's been removed from tracking
-git status
-```
-
-### 2. Commit this change
-
-```bash
-git add .gitignore
-git commit -m "Remove .env from Git tracking and update .gitignore"
-```
-
-### 3. Create a sample .env file (optional but recommended)
-
-````bash
-# Make a copy without sensitive data
-cp .env .env.example
-````
-
-Then edit `.env.example` to replace all actual API keys with placeholders:
-
-```bash
-# Edit the file to remove secrets
-# Replace API keys with placeholder text like:
-# OPENAI_API_KEY=your_openai_api_key_here
-```
-
-### 4. Add and commit the example file
-
-```bash
-git add .env.example
-git commit -m "Add example environment file"
-```
-
-### 5. Now try pushing again
-
-```bash
-git push origin main
-```
-
-This should work because you've now:
-1. Removed the sensitive .env file from Git tracking
-2. Kept .env in your .gitignore to prevent it from being added again
-3. Added a safe .env.example file that others can use as a template
 
 # Retrieving Your Original Commit
 
@@ -428,3 +414,63 @@ git reset --hard HASH
 The important concept is that Git stores the complete state of your project at each commit, not just the differences. When you restore to a specific commit, you're getting the entire project as it existed at that point in time.
 
 Each commit has its own hash, and each represents a complete snapshot of your code - not just the changes made in that commit.
+
+## Note: Troubleshooting
+
+# How to Fix the Git Push Issue After Adding .env to .gitignore
+
+I WASTED OVER AN HOUR TRYING TO ENSURE THE KEYS WERE DELETED WHEN I ACCIDENTALLY CHECKED IN THE .ENV FILE.  GITHUB MAY HAVE BLOCKED IT HOWEVER I KEPT SEEING THE KEYS IN THE TERMINAL.  RATHER THAN CONTINUE, I BLEW OUT THE PROJECT AND RECREATED IT FROM SCRATCH... I DON'T TRUST COPILOT YET.  IT DOESN'T SEEM TO GIVE ME THE RIGHT ANSWERS.  SKIP TRING TO DO THIS AND MAKE SURE TO ALWAYS INCLUDE .ENV IN THE .GITIGNORE FILE AND ALL OF THIS IS MOOT.
+
+Even though you've added `.env` to your `.gitignore`, Git is still tracking the file because it was previously committed. You need to remove it from Git's tracking while keeping the local file.
+
+## Solution Steps
+
+### 1. Remove the .env file from Git's tracking (but keep it locally)
+
+```bash
+# Remove .env from Git tracking but keep the local file
+git rm --cached .env
+
+# Verify it's been removed from tracking
+git status
+```
+
+### 2. Commit this change
+
+```bash
+git add .gitignore
+git commit -m "Remove .env from Git tracking and update .gitignore"
+```
+
+### 3. Create a sample .env file (optional but recommended)
+
+````bash
+# Make a copy without sensitive data
+cp .env .env.example
+````
+
+Then edit `.env.example` to replace all actual API keys with placeholders:
+
+```bash
+# Edit the file to remove secrets
+# Replace API keys with placeholder text like:
+# OPENAI_API_KEY=your_openai_api_key_here
+```
+
+### 4. Add and commit the example file
+
+```bash
+git add .env.example
+git commit -m "Add example environment file"
+```
+
+### 5. Now try pushing again
+
+```bash
+git push origin main
+```
+
+This should work because you've now:
+1. Removed the sensitive .env file from Git tracking
+2. Kept .env in your .gitignore to prevent it from being added again
+3. Added a safe .env.example file that others can use as a template

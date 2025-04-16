@@ -1,13 +1,5 @@
-import sys
-import os
-
-# Add the project directory to the path to ensure imports work correctly
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-# Import our MoviePy config first to ensure proper initialization
-from utility.render.moviepy_config import *
-
 import time
+import os
 import tempfile
 import zipfile
 import platform

@@ -1,45 +1,53 @@
 # syntax=docker/dockerfile:1.4
 
+# Build stage for dependencies
+FROM python:3.11-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+COPY requirements.txt .
+RUN pip install --user -r requirements.txt streamlit
+
+# Final stage
 FROM python:3.11-slim
 
-# Create necessary directories
-RUN python create_directories.py
-
-# Install ImageMagick and other necessary dependencies
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     imagemagick \
     ffmpeg \
     libsm6 \
     libxext6 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Fix ImageMagick policy to allow proper video processing
-RUN sed -i 's/<policy domain="path" rights="none" pattern="@\*"/<policy domain="path" rights="read|write" pattern="@*"/g' /etc/ImageMagick-6/policy.xml || true
-# Add these more comprehensive policy updates for video processing
-RUN sed -i 's/<policy domain="resource" name="memory" value="256MiB"/<policy domain="resource" name="memory" value="1GiB"/g' /etc/ImageMagick-6/policy.xml || true
-RUN sed -i 's/<policy domain="resource" name="disk" value="1GiB"/<policy domain="resource" name="disk" value="8GiB"/g' /etc/ImageMagick-6/policy.xml || true
-RUN sed -i 's/<policy domain="resource" name="width" value="16KP"/<policy domain="resource" name="width" value="64KP"/g' /etc/ImageMagick-6/policy.xml || true
-RUN sed -i 's/<policy domain="resource" name="height" value="16KP"/<policy domain="resource" name="height" value="64KP"/g' /etc/ImageMagick-6/policy.xml || true
+    && rm -rf /var/lib/apt/lists/* \
+    && sed -i \
+    -e 's/<policy domain="path" rights="none" pattern="@\*"/<policy domain="path" rights="read|write" pattern="@*"/g' \
+    -e 's/<policy domain="resource" name="memory" value="256MiB"/<policy domain="resource" name="memory" value="1GiB"/g' \
+    -e 's/<policy domain="resource" name="disk" value="1GiB"/<policy domain="resource" name="disk" value="8GiB"/g' \
+    -e 's/<policy domain="resource" name="width" value="16KP"/<policy domain="resource" name="width" value="64KP"/g' \
+    -e 's/<policy domain="resource" name="height" value="16KP"/<policy domain="resource" name="height" value="64KP"/g' \
+    /etc/ImageMagick-6/policy.xml || true
 
 WORKDIR /app
 
-# Copy requirements and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt streamlit
+# Copy installed packages from builder
+COPY --from=builder /root/.local /root/.local
+ENV PATH=/root/.local/bin:$PATH
 
-# Copy application code
-COPY . .
+# Copy only necessary files
+COPY utility/ /app/utility/
+COPY app.py streamlit_app.py /app/
 
-# Create necessary directories with proper permissions
-RUN mkdir -p /app/output /app/temp && \
-    chmod -R 755 /app/output /app/temp
+# Create directories with permissions
+RUN python /app/utility/directories/create_directories.py \
+    && chmod -R 755 /app/output /app/temp
 
-# Set ImageMagick binary path
-ENV IMAGEMAGICK_BINARY=/usr/bin/convert
-
-# Set environment variables as placeholders
-ENV OPENAI_API_KEY=""
-ENV PEXELS_API_KEY=""
+# Set environment variables
+ENV IMAGEMAGICK_BINARY=/usr/bin/convert \
+    OPENAI_API_KEY="" \
+    PEXELS_API_KEY=""
 
 EXPOSE 7701
 

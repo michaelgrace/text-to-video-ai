@@ -5,7 +5,7 @@ import zipfile
 import platform
 import subprocess
 from moviepy.editor import (AudioFileClip, CompositeVideoClip, CompositeAudioClip, ImageClip,
-                            TextClip, VideoFileClip)
+                            TextClip, VideoFileClip, ColorClip)
 from moviepy.audio.fx.audio_loop import audio_loop
 from moviepy.audio.fx.audio_normalize import audio_normalize
 import requests
@@ -66,15 +66,21 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
 
     visual_clips = []
     for (t1, t2), video_url in background_video_data:
-        # Download the video file
-        video_filename = tempfile.NamedTemporaryFile(delete=False).name
-        download_file(video_url, video_filename)
-        
-        # Create VideoFileClip from the downloaded file
-        video_clip = VideoFileClip(video_filename)
-        video_clip = video_clip.set_start(t1)
-        video_clip = video_clip.set_end(t2)
-        visual_clips.append(video_clip)
+        if video_url is None:
+            # Create black background clip
+            black_bg = ColorClip(size=(1920, 1080), color=(0,0,0))
+            black_bg = black_bg.set_duration(t2 - t1)
+            black_bg = black_bg.set_start(t1)
+            black_bg = black_bg.set_end(t2)
+            visual_clips.append(black_bg)
+        else:
+            # Download and process video as before
+            video_filename = tempfile.NamedTemporaryFile(delete=False).name
+            download_file(video_url, video_filename)
+            video_clip = VideoFileClip(video_filename)
+            video_clip = video_clip.set_start(t1)
+            video_clip = video_clip.set_end(t2)
+            visual_clips.append(video_clip)
     
     audio_clips = []
     audio_file_clip = AudioFileClip(audio_file_path)

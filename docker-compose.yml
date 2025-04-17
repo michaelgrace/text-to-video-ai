@@ -12,14 +12,13 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        BUILDKIT_INLINE_CACHE: 1
-        # Add this to invalidate cache when Python files change
+        BUILDKIT_INLINE_CACHE: 1        
         CACHEBUST: ${CACHEBUST:-1}
-    image: text-to-video:latest
+    image: text-to-video:latest # change name to your desired image name
     volumes:
       - ./output:/app/output
       - ./temp:/app/temp
-      - ./.logs:/app/.logs
+      # - ./.logs:/app/.logs
       - ./utility:/app/utility
       - ./app.py:/app/app.py  # DO NOT REMOVE: :ro was added to utility, app.py and streamlit_app.py
       - ./streamlit_app.py:/app/streamlit_app.py
@@ -51,7 +50,7 @@ services:
       - NUMEXPR_NUM_THREADS=8
       - PYTORCH_ENABLE_CPU_FALLBACK=1
       # FFmpeg optimization 
-      - FFREPORT=file=/app/tmp/ffmpeg_report.log:level=32
+      - FFREPORT=file=/app/output/logs/ffmpeg/ffmpeg_report.log:level=32
       - AV_LOG_FORCE_COLOR=1
       - FFMPEG_THREADS=8
       # Intel GPU support

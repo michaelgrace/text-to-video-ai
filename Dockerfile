@@ -41,8 +41,8 @@ COPY utility/ /app/utility/
 COPY app.py streamlit_app.py /app/
 
 # Create directories with permissions
-RUN python /app/utility/directories/create_directories.py \
-    && chmod -R 755 /app/output /app/temp
+# RUN python /app/utility/directories/create_directories.py \
+#     && chmod -R 755 /app/output /app/temp
 
 # Set environment variables
 ENV IMAGEMAGICK_BINARY=/usr/bin/convert \

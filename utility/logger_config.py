@@ -19,7 +19,7 @@ def setup_logger():
     # File output for debugging
     if log_level == "DEBUG":
         logger.add(
-            ".logs/debug.log",
+            "output/logs/debug.log",
             rotation="500 MB",
             retention="10 days",
             level="DEBUG"

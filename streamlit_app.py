@@ -18,6 +18,13 @@ pexels_key = st.text_input("Pexels API Key", type="password",
 # Input field for topic
 topic = st.text_input("Topic for Video", value="Interesting Facts About Space")
 
+def format_filename(topic):
+    # Replace spaces with hyphens and remove special characters
+    filename = topic.replace(' ', '-')
+    # Keep only alphanumeric chars and hyphens
+    filename = ''.join(c for c in filename if c.isalnum() or c == '-')
+    return f"{filename}.mp4"
+
 # Process button
 if st.button("Generate Video"):
     if not openai_key or not pexels_key:
@@ -83,12 +90,12 @@ if st.button("Generate Video"):
                         # Display the video
                         st.video(str(output_file))
                         
-                        # Add download button
+                        # Add download button with formatted filename
                         with open(output_file, "rb") as file:
                             st.download_button(
                                 label="Download Video",
                                 data=file,
-                                file_name="rendered_video.mp4",
+                                file_name=format_filename(topic),  # Use formatted topic name
                                 mime="video/mp4"
                             )
                     else:

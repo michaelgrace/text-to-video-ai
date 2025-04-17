@@ -9,7 +9,7 @@ from utility.audio.audio_generator import generate_audio
 from utility.captions.timed_captions_generator import generate_timed_captions
 from utility.video.background_video_generator import generate_video_url
 from utility.render.render_engine import get_output_media
-from utility.video.video_search_query_generator import getVideoSearchQueriesTimed, merge_empty_intervals
+from utility.video.video_search_query_generator import getVideoSearchQueriesTimed
 import argparse
 from utility.logger_config import setup_logger
 
@@ -46,16 +46,20 @@ if __name__ == "__main__":
         try:
             background_video_urls = generate_video_url(search_terms, VIDEO_SERVER)
             if not background_video_urls or all(url[1] is None for url in background_video_urls):
-                raise Exception("Failed to retrieve any videos from Pexels")
+                print("No videos found, using black background")
+                # Create a single segment covering the entire audio duration
+                audio_duration = float(timed_captions[-1][0][1])  # Get end time of last caption
+                background_video_urls = [[[0, audio_duration], None]]
             print(background_video_urls)
         except Exception as e:
-            print(f"Pexel retrieval failure: {str(e)}. Please try your query again.")
-            # return
+            print(f"Pexel retrieval failure: {str(e)}. Using black background.")
+            audio_duration = float(timed_captions[-1][0][1])
+            background_video_urls = [[[0, audio_duration], None]]
     else:
         print("No background video")
         logger.debug("No background video")
-
-    background_video_urls = merge_empty_intervals(background_video_urls)
+        audio_duration = float(timed_captions[-1][0][1])
+        background_video_urls = [[[0, audio_duration], None]]
 
     if background_video_urls is not None:
         video = get_output_media(SAMPLE_FILE_NAME, timed_captions, background_video_urls, VIDEO_SERVER)

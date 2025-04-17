@@ -24,6 +24,7 @@ services:
       - ./app.py:/app/app.py  # DO NOT REMOVE: :ro was added to utility, app.py and streamlit_app.py
       - ./streamlit_app.py:/app/streamlit_app.py
     environment:
+      - DEBUG_MODE=${DEBUG_MODE:-false}  # Enable debug in dev
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_MODEL_NAME=${OPENAI_MODEL_NAME}
         

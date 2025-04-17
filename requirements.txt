@@ -65,3 +65,5 @@ streamlit==1.31.1
 nvidia-cuda-runtime-cu12==12.1.105; platform_system == "Linux"
 nvidia-cuda-nvrtc-cu12==12.1.105; platform_system == "Linux"
 nvidia-cudnn-cu12==8.9.2.26; platform_system == "Linux"
+
+loguru==0.7.2

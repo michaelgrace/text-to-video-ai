@@ -1,0 +1,17 @@
+# Core dependencies
+openai==1.31.1
+edge-tts==6.1.12
+whisper-timestamped==1.15.4
+moviepy==1.0.3
+streamlit==1.31.1
+
+# Video processing
+imageio-ffmpeg==0.5.1
+Pillow==10.3.0
+
+# Support libraries
+requests==2.32.3
+python-dotenv==1.0.0
+
+# Optional GPU support
+torch==2.1.0  # More stable version than 2.3.1

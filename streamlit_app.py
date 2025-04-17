@@ -38,12 +38,39 @@ if st.button("Generate Video"):
                 # Create a placeholder for the output
                 output_placeholder = st.empty()
                 
-                # Show output in real-time
+                # Create placeholders for different stages
+                script_placeholder = st.empty()
+                audio_placeholder = st.empty()
+                captions_placeholder = st.empty()
+                video_placeholder = st.empty()
+                progress_bar = st.progress(0)
+                
+                # Show output in real-time with stage tracking
+                stages = {
+                    "script:": (script_placeholder, "🤖 Generating script..."),
+                    "audio_tts": (audio_placeholder, "🎵 Creating audio..."),
+                    "timed_captions": (captions_placeholder, "📝 Generating captions..."),
+                    "background_video": (video_placeholder, "🎬 Processing video...")
+                }
+                
+                current_progress = 0
                 while True:
+                    # This code captures and displays the output
                     output = process.stdout.readline()
+                    if output:
+                        output_placeholder.text(output.strip())
+                    
                     if output == '' and process.poll() is not None:
                         break
                     if output:
+                        # Update relevant stage placeholder
+                        for key, (placeholder, message) in stages.items():
+                            if key in output.lower():
+                                placeholder.info(message)
+                                current_progress += 25
+                                progress_bar.progress(min(current_progress, 100))
+                        
+                        # Show all output in main placeholder
                         output_placeholder.text(output.strip())
                 
                 # Check if process completed successfully

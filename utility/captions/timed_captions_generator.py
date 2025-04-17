@@ -3,6 +3,8 @@ from whisper_timestamped import load_model, transcribe_timestamped
 import re
 
 def generate_timed_captions(audio_filename,model_size="base"):
+    # DTW is used internally by whisper_timestamped here
+    # to align the transcribed text with audio timestamps
     WHISPER_MODEL = load_model(model_size)
    
     gen = transcribe_timestamped(WHISPER_MODEL, audio_filename, verbose=False, fp16=False)

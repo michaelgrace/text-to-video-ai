@@ -29,6 +29,17 @@ def get_program_path(program_name):
     program_path = search_program(program_name)
     return program_path
 
+def check_gpu_support():
+    hwaccel = os.environ.get('FFMPEG_HWACCEL')
+    hwaccel_device = os.environ.get('FFMPEG_VAAPI_DEVICE')
+    try:
+        if hwaccel and hwaccel_device and os.path.exists(hwaccel_device):
+            subprocess.run(['vainfo'], check=True, capture_output=True)
+            return True, hwaccel, hwaccel_device
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    return False, None, None
+
 def get_output_media(audio_file_path, timed_captions, background_video_data, video_server):
     OUTPUT_FILE_NAME = "rendered_video.mp4"
     magick_path = get_program_path("magick")
@@ -38,6 +49,21 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
     else:
         os.environ['IMAGEMAGICK_BINARY'] = '/usr/bin/convert'
     
+    # Configure GPU support
+    gpu_available, hwaccel, hwaccel_device = check_gpu_support()
+    if gpu_available:
+        print("GPU acceleration enabled")
+        ffmpeg_params = [
+            '-hwaccel', hwaccel,
+            '-hwaccel_device', hwaccel_device,
+            '-hwaccel_output_format', 'vaapi'
+        ]
+        codec = 'h264_vaapi'
+    else:
+        print("Using CPU encoding")
+        ffmpeg_params = []
+        codec = 'libx264'
+
     visual_clips = []
     for (t1, t2), video_url in background_video_data:
         # Download the video file
@@ -68,7 +94,27 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
         video.duration = audio.duration
         video.audio = audio
 
-    video.write_videofile(OUTPUT_FILE_NAME, codec='libx264', audio_codec='aac', fps=25, preset='veryfast')
+    try:
+        video.write_videofile(
+            OUTPUT_FILE_NAME,
+            codec=codec,
+            audio_codec='aac',
+            fps=25,
+            preset='veryfast',
+            ffmpeg_params=ffmpeg_params,
+            threads=int(os.environ.get('FFMPEG_THREADS', '8'))
+        )
+    except Exception as e:
+        print(f"Error with GPU encoding: {e}")
+        if codec != 'libx264':
+            print("Falling back to CPU encoding")
+            video.write_videofile(
+                OUTPUT_FILE_NAME,
+                codec='libx264',
+                audio_codec='aac',
+                fps=25,
+                preset='veryfast'
+            )
     
     # Clean up downloaded files
     for (t1, t2), video_url in background_video_data:

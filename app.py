@@ -28,16 +28,19 @@ if __name__ == "__main__":
 
     response = generate_script(SAMPLE_TOPIC)
     logger.debug(f"Generated script: {response}")
+    print("script: {}".format(response))
 
     asyncio.run(generate_audio(response, SAMPLE_FILE_NAME))
     logger.debug(f"Generated audio file: {SAMPLE_FILE_NAME}")
 
     timed_captions = generate_timed_captions(SAMPLE_FILE_NAME)
     logger.debug(f"Generated captions: {timed_captions}")
-
+    print(timed_captions)
+	
     search_terms = getVideoSearchQueriesTimed(response, timed_captions)
     logger.debug(f"Generated search terms: {search_terms}")
-
+    print(search_terms)
+	
     background_video_urls = None
     if search_terms is not None:
         try:
@@ -47,14 +50,17 @@ if __name__ == "__main__":
             print(background_video_urls)
         except Exception as e:
             print(f"Pexel retrieval failure: {str(e)}. Please try your query again.")
-            return
+            # return
     else:
+        print("No background video")
         logger.debug("No background video")
 
     background_video_urls = merge_empty_intervals(background_video_urls)
 
     if background_video_urls is not None:
         video = get_output_media(SAMPLE_FILE_NAME, timed_captions, background_video_urls, VIDEO_SERVER)
+        print(video)
         logger.debug(f"Generated video: {video}")
     else:
+        print("No video")
         logger.debug("No video")

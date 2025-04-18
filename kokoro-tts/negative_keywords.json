@@ -1,0 +1,10 @@
+{
+    "negative_keywords": [
+        "argument", "arguing", "argue","betrayal","heartbreak",
+        "fight", "fighting", "fought",
+        "prison", "jail", "incarceration",
+        "depression", "depressed", "sad",
+        "darkness", "occult", "violent", "violence",
+        "conflict", "suffering"
+    ]
+}

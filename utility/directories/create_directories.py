@@ -10,7 +10,21 @@ directories = [
     'output/videos',
     'output/audio',
     'output/captions',    
-    'temp'
+    'output/logs',
+    'output/logs/gpt_logs',
+    'output/logs/pexel_logs',
+    'output/whisper',
+    'output/whisper/audio',
+    'output/whisper/captions',
+    'output/ffmpeg',
+    'output/ffmpeg/audio',
+    'output/ffmpeg/videos', 
+    'temp',
+    'temp/pexels_cache',
+    'temp/pexels_cache/videos',
+    'temp/pexels_cache/metadata',
+    'temp/theme_cache',
+    'temp/content_cache'
 ]
 
 # Make all paths relative to project root

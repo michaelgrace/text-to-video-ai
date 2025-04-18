@@ -8,6 +8,7 @@ __pycache__/
 *$py.class
 venv/
 .logs/
+scripts/
 
 # Media files
 *.mp4

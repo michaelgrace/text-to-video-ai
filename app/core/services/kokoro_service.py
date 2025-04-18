@@ -16,16 +16,16 @@ class KokoroServiceClient:
         """Initialize the Kokoro Service client."""
         self.base_url = base_url
         
-        # Load the voice list from the provided JSON file in the data folder
-        kokoro_voices_path = Path(os.path.dirname(os.path.dirname(__file__))) / "data" / "kokoro_voices.json"
+        # Update path to look in config directory
+        kokoro_voices_path = Path(__file__).parent.parent.parent.parent / "config" / "data" / "kokoro_voices.json"
         if kokoro_voices_path.exists():
             try:
                 with open(kokoro_voices_path, "r") as f:
                     voice_data = json.load(f)
                     self.voices = voice_data.get("voices", [])
-                    logger.info(f"Loaded {len(self.voices)} Kokoro voices from data folder")
+                    logger.info(f"Loaded {len(self.voices)} Kokoro voices")
             except Exception as e:
-                logger.error(f"Failed to load Kokoro voices from file: {e}")
+                logger.error(f"Failed to load Kokoro voices: {e}")
                 self.voices = ["af_heart"]  # Default fallback
         else:
             logger.warning(f"Kokoro voices file not found at {kokoro_voices_path}")

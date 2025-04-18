@@ -1,26 +1,37 @@
 import os
 
-# Get the project root directory (where this script lives)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Create necessary directories for the application
 directories = [
-    'output',
-    'output/photos',
-    'output/videos',
+    # Core application directories
+    'app/core/generators',
+    'app/core/processors',
+    'app/core/services',
+    'app/models',
+    'app/utils',
+    
+    # API and web interface
+    'api',
+    'web',
+    
+    # Configuration
+    'config',
+    'config/data',  # Add this line
+    
+    # Testing
+    'tests',
+    'tests/unit',
+    'tests/integration',
+    
+    # Output directories
     'output/audio',
-    'output/captions',    
-    'output/logs',
+    'output/videos',
+    'output/captions',
     'output/logs/gpt_logs',
     'output/logs/pexel_logs',
-    'output/whisper',
-    'output/whisper/audio',
-    'output/whisper/captions',
-    'output/ffmpeg',
-    'output/ffmpeg/audio',
-    'output/ffmpeg/videos', 
-    'temp',
-    'temp/pexels_cache',
+    'output/logs/app_logs',
+    
+    # Cache directories
     'temp/pexels_cache/videos',
     'temp/pexels_cache/metadata',
     'temp/theme_cache',
@@ -32,5 +43,3 @@ for directory in directories:
     full_path = os.path.join(PROJECT_ROOT, directory)
     os.makedirs(full_path, exist_ok=True)
     print(f"Created directory: {full_path}")
-
-print(f"Directory structure created successfully in: {PROJECT_ROOT}")

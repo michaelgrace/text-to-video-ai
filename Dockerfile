@@ -36,9 +36,14 @@ WORKDIR /app
 COPY --from=builder /root/.local /root/.local
 ENV PATH=/root/.local/bin:$PATH
 
+# Add the app directory to Python path
+ENV PYTHONPATH=/app
+
 # Copy only necessary files
-COPY utility/ /app/utility/
-COPY app.py streamlit_app.py /app/
+COPY app/ /app/app/
+COPY web/streamlit_app.py /app/web/streamlit_app.py
+COPY config/ /app/config/
+COPY app.py /app/app.py
 
 # Create directories with permissions
 # RUN python /app/utility/directories/create_directories.py \
@@ -52,7 +57,7 @@ ENV IMAGEMAGICK_BINARY=/usr/bin/convert \
 EXPOSE 7701
 
 # Use the same command as in docker-compose
-CMD ["streamlit", "run", "streamlit_app.py", "--server.port=7701", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "web/streamlit_app.py", "--server.port=7701", "--server.address=0.0.0.0"]
 
 # DO NOT REMOVE 
 # Command to run the application

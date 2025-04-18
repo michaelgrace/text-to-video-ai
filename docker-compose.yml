@@ -18,10 +18,10 @@ services:
     volumes:
       - ./output:/app/output
       - ./temp:/app/temp
-      # - ./.logs:/app/.logs
-      - ./utility:/app/utility
-      - ./app.py:/app/app.py  # DO NOT REMOVE: :ro was added to utility, app.py and streamlit_app.py
-      - ./streamlit_app.py:/app/streamlit_app.py
+      - ./app:/app/app
+      - ./web:/app/web
+      - ./config:/app/config
+      - ./app.py:/app/app.py
     environment:
       - DEBUG_MODE=${DEBUG_MODE:-false}  # Enable debug in dev
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -70,7 +70,7 @@ services:
     networks:
       - ttv-network
       - crown-network
-    command: streamlit run streamlit_app.py --server.port=7701 --server.address=0.0.0.0
+    command: streamlit run web/streamlit_app.py --server.port=7701 --server.address=0.0.0.0
 
 networks:
   ttv-network:

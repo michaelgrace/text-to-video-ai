@@ -1,7 +1,7 @@
 import os
 import edge_tts
 from loguru import logger
-from utility.services.kokoro_tts.kokoro_service import kokoro_client
+from app.core.services.kokoro_service import kokoro_client
 
 VOICE_PROVIDER = os.getenv('VOICE_PROVIDER', 'kokoro')  # Kokoro is default
 

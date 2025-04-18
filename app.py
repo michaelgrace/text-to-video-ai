@@ -1,17 +1,13 @@
-from openai import OpenAI
 import os
-import edge_tts
-import json
 import asyncio
-import whisper_timestamped as whisper
-from utility.script.script_generator import generate_script
-from utility.audio.audio_generator import generate_audio
-from utility.captions.timed_captions_generator import generate_timed_captions
-from utility.video.background_video_generator import generate_video_url
-from utility.render.render_engine import get_output_media
-from utility.video.video_search_query_generator import getVideoSearchQueriesTimed
 import argparse
-from utility.logger_config import setup_logger
+from app.core.generators.script_generator import generate_script
+from app.core.generators.audio_generator import generate_audio
+from app.core.processors.caption_processor import generate_timed_captions
+from app.core.generators.video_generator import generate_video_url
+from app.utils.logger import setup_logger
+from app.core.processors.render_engine import get_output_media
+from app.core.processors.video_search_query_generator import getVideoSearchQueriesTimed
 
 # Initialize logger
 logger = setup_logger()

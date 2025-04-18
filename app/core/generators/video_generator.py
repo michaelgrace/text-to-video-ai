@@ -2,7 +2,7 @@ import os
 import requests
 import time
 from tenacity import retry, stop_after_attempt, wait_exponential
-from utility.utils import log_response, LOG_TYPE_PEXEL
+from app.utils.helpers import log_response, LOG_TYPE_PEXEL
 
 PEXELS_API_KEY = os.environ.get('PEXELS_API_KEY')
 

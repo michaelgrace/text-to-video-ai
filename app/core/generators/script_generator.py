@@ -1,6 +1,7 @@
 import os
 from openai import OpenAI
 import json
+from app.utils.logger import setup_logger
 
 # if len(os.environ.get("GROQ_API_KEY")) > 30:
 #     from groq import Groq

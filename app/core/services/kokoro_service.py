@@ -8,13 +8,16 @@ import shutil
 from typing import Dict, List, Optional, Any, Union
 from loguru import logger
 from pathlib import Path
+from config.settings import settings
 
 class KokoroServiceClient:
     """Client for Kokoro Service TTS API."""
     
-    def __init__(self, base_url: str = "http://kokoro_service:8880"):
+    def __init__(self):
         """Initialize the Kokoro Service client."""
-        self.base_url = base_url
+        self.base_url = settings.KOKORO_SERVICE_URL
+        self.timeout = settings.KOKORO_TIMEOUT  # Add to settings
+        self.max_retries = settings.API_RETRY_ATTEMPTS
         
         # Update path to look in config directory
         kokoro_voices_path = Path(__file__).parent.parent.parent.parent / "config" / "data" / "kokoro_voices.json"
@@ -84,9 +87,9 @@ class KokoroServiceClient:
     async def create_speech(
         self,
         text: str,
-        voice: str = "af_heart",
+        voice: str = settings.DEFAULT_VOICE,
         response_format: str = "mp3",
-        speed: float = 1.0
+        speed: float = settings.DEFAULT_VOICE_SPEED
     ) -> Optional[bytes]:
         """Generate speech using Kokoro Service."""
         try:
@@ -153,6 +156,4 @@ class KokoroServiceClient:
 
 
 # Create a singleton instance for reuse
-kokoro_client = KokoroServiceClient(
-    base_url=os.environ.get("KOKORO_SERVICE_URL", "http://kokoro_service:8880")
-)
+kokoro_client = KokoroServiceClient()

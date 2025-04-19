@@ -6,7 +6,7 @@ anyio==4.4.0
 attrs==23.2.0
 certifi==2024.7.4
 charset-normalizer==3.3.2
-Cython==3.0.10
+#Cython==3.0.10  # Not directly used in current codebase
 decorator==4.4.2
 distro==1.9.0
 dtw-python==1.5.1
@@ -20,15 +20,15 @@ httpx==0.27.0
 idna==3.7
 imageio==2.34.1
 imageio-ffmpeg==0.5.1
-Jinja2==3.1.4
+#Jinja2==3.1.4  # Not used in current implementation
 llvmlite==0.42.0
 MarkupSafe==2.1.5
-more-itertools==10.2.0
+#more-itertools==10.2.0  # Not directly used
 moviepy==1.0.3
 
-mpmath==1.3.0
+#mpmath==1.3.0  # Not directly used
 multidict==6.0.5
-networkx==3.3
+#networkx==3.3  # Not directly used
 numba==0.59.1
 numpy==1.26.4
 openai==1.31.1
@@ -43,7 +43,7 @@ requests==2.32.3
 scipy==1.13.1
 
 sniffio==1.3.1
-sympy==1.12.1
+#sympy==1.12.1  # Not directly used
 tiktoken==0.7.0
 
 # Deep learning - potential conflict zone
@@ -55,15 +55,21 @@ typing_extensions==4.12.1
 urllib3==2.2.1
 whisper-timestamped==1.15.4
 yarl==1.9.4
-groq==0.11.0
+#groq==0.11.0  # Only needed if using Groq API (currently commented out in code)
 
 # Add version constraints to unversioned packages
 python-dotenv==1.0.0
 streamlit==1.31.1
 
-# Optional GPU support
-nvidia-cuda-runtime-cu12==12.1.105; platform_system == "Linux"
-nvidia-cuda-nvrtc-cu12==12.1.105; platform_system == "Linux"
-nvidia-cudnn-cu12==8.9.2.26; platform_system == "Linux"
+# Optional GPU support - commented as they're platform specific
+#nvidia-cuda-runtime-cu12==12.1.105; platform_system == "Linux"
+#nvidia-cuda-nvrtc-cu12==12.1.105; platform_system == "Linux"
+#nvidia-cudnn-cu12==8.9.2.26; platform_system == "Linux"
 
 loguru==0.7.2
+
+# GPU Monitoring
+# psutil==5.9.8  # For system resource monitoring
+# py3nvml==0.2.7  # For NVIDIA GPU monitoring
+# intel-gpu-monitoring==0.1.2  # For Intel GPU monitoring via metrics discovery
+# vainfo==0.1.0  # For VA-API support checking

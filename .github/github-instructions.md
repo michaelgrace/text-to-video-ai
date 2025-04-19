@@ -28,6 +28,31 @@ Must preserve:
 
 ## Technical Standards
 
+### Code Formatting Standards
+1. Code Changes Format:
+   - Always use `// ...existing code...` or `# ...existing code...` (language dependent) to indicate unchanged sections
+   - Keep changes concise and focused
+   - Show only the minimal context needed to understand the change
+
+2. Multiple Changes in Same File:
+   - Use a single code block per file
+   - Show changes in their correct relative positions
+   - Maintain proper context with existing code markers
+
+3. Filepath Conventions:
+   - Include exact filepath as a comment at the start of every code block
+   - Preserve original slash style (forward or backward)
+   - Format: `// filepath: d:\path\to\file.ext`
+
+Example of proper code block formatting:
+```python
+# filepath: d:\path\to\example.py
+# ...existing code...
+def process_video(input_file, output_file, quality=HIGH_QUALITY):
+    """Process video with specified quality"""
+    # ...existing code...
+```
+
 ### Build and Performance
 - Keep dependencies in separate layers for better Docker caching
 - Preserve pip cache between builds for faster installation

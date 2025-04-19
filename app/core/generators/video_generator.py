@@ -3,10 +3,13 @@ import requests
 import time
 from tenacity import retry, stop_after_attempt, wait_exponential
 from app.utils.helpers import log_response, LOG_TYPE_PEXEL
+from config.settings import settings
+from functools import lru_cache
 
-PEXELS_API_KEY = os.environ.get('PEXELS_API_KEY')
+PEXELS_API_KEY = settings.PEXELS_API_KEY
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+@retry(stop=stop_after_attempt(settings.MAX_SEARCH_ATTEMPTS), 
+      wait=wait_exponential(multiplier=1, min=settings.SEARCH_BACKOFF_MIN, max=settings.SEARCH_BACKOFF_MAX))
 def search_videos_with_retry(query_string, orientation_landscape=True):
     try:
         response = search_videos(query_string, orientation_landscape)
@@ -17,16 +20,17 @@ def search_videos_with_retry(query_string, orientation_landscape=True):
         print(f"Error searching videos: {e}")
         raise
 
+@lru_cache(maxsize=128)
 def search_videos(query_string, orientation_landscape=True):
-    url = "https://api.pexels.com/videos/search"
+    url = settings.PEXELS_SEARCH_URL
     headers = {
         "Authorization": PEXELS_API_KEY,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        "User-Agent": settings.PEXELS_USER_AGENT,
     }
     params = {
         "query": query_string,
         "orientation": "landscape" if orientation_landscape else "portrait",
-        "per_page": 15
+        "per_page": settings.PEXELS_PER_PAGE
     }
 
     response = requests.get(url, headers=headers, params=params)
@@ -36,8 +40,7 @@ def search_videos(query_string, orientation_landscape=True):
     return json_data
 
 def getBestVideo(query_string, orientation_landscape=True, used_vids=[], attempt=0):
-    max_attempts = 3
-    while attempt < max_attempts:
+    while attempt < settings.MAX_RETRIES:
         try:
             vids = search_videos_with_retry(query_string, orientation_landscape)
             videos = vids['videos']
@@ -47,29 +50,35 @@ def getBestVideo(query_string, orientation_landscape=True, used_vids=[], attempt
                 continue
                 
             if orientation_landscape:
-                filtered_videos = [video for video in videos if video['width'] >= 1920 and video['height'] >= 1080 and video['width']/video['height'] == 16/9]
+                filtered_videos = [video for video in videos 
+                    if video['width'] >= settings.VIDEO_LANDSCAPE_WIDTH and 
+                    video['height'] >= settings.VIDEO_LANDSCAPE_HEIGHT and 
+                    abs(video['width']/video['height'] - settings.ASPECT_RATIO) < 0.01]  # More forgiving ratio check
             else:
-                filtered_videos = [video for video in videos if video['width'] >= 1080 and video['height'] >= 1920 and video['height']/video['width'] == 16/9]
+                filtered_videos = [video for video in videos 
+                    if video['width'] >= settings.VIDEO_PORTRAIT_WIDTH and 
+                    video['height'] >= settings.VIDEO_PORTRAIT_HEIGHT and 
+                    abs(video['height']/video['width'] - settings.ASPECT_RATIO) < 0.01]
             
-            if not filtered_videos and attempt < max_attempts:
+            if not filtered_videos and attempt < settings.MAX_RETRIES:
                 attempt += 1
                 continue
                 
-            sorted_videos = sorted(filtered_videos, key=lambda x: abs(15-int(x['duration'])))
+            sorted_videos = sorted(filtered_videos, key=lambda x: abs(settings.VIDEO_TARGET_DURATION - int(x['duration'])))
             
             for video in sorted_videos:
                 for video_file in video['video_files']:
                     if orientation_landscape:
-                        if video_file['width'] == 1920 and video_file['height'] == 1080:
+                        if video_file['width'] == settings.VIDEO_LANDSCAPE_WIDTH and video_file['height'] == settings.VIDEO_LANDSCAPE_HEIGHT:
                             if not (video_file['link'].split('.hd')[0] in used_vids):
                                 return video_file['link']
                     else:
-                        if video_file['width'] == 1080 and video_file['height'] == 1920:
+                        if video_file['width'] == settings.VIDEO_PORTRAIT_WIDTH and video_file['height'] == settings.VIDEO_PORTRAIT_HEIGHT:
                             if not (video_file['link'].split('.hd')[0] in used_vids):
                                 return video_file['link']
         except Exception as e:
-            if attempt >= max_attempts - 1:
-                print(f"Failed to get video after {max_attempts} attempts: {e}")
+            if attempt >= settings.MAX_RETRIES - 1:
+                print(f"Failed to get video after {settings.MAX_RETRIES} attempts: {e}")
                 return None
             attempt += 1
             time.sleep(2 ** attempt)  # Exponential backoff
@@ -81,24 +90,16 @@ def get_alternative_terms(search_term):
     """Generate alternative search terms when original fails"""
     alternatives = []
     
-    # Remove specific words
+    # Remove specific words using settings
     term = search_term.lower()
-    if 'the' in term:
-        alternatives.append(term.replace('the', '').strip())
-    
-    # Add generic equivalents
-    if 'person' in term:
-        alternatives.extend(['people outdoors', 'human activity'])
-    elif 'animal' in term:
-        alternatives.extend(['wildlife', 'nature'])
-    elif 'building' in term:
-        alternatives.extend(['architecture', 'city view'])
-        
-    # Add broader category
-    if 'night' in term:
-        alternatives.append('evening scene')
-    if 'water' in term:
-        alternatives.append('ocean waves')
+    for word, replacement in settings.WORD_REPLACEMENTS.items():
+        if word in term:
+            alternatives.append(term.replace(word, replacement).strip())
+            
+    # Use generic alternatives from settings
+    for key, values in settings.GENERIC_ALTERNATIVES.items():
+        if key in term.lower():
+            alternatives.extend(values)
     
     return alternatives
 

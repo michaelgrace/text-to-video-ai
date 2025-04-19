@@ -2,8 +2,9 @@ import os
 import edge_tts
 from loguru import logger
 from app.core.services.kokoro_service import kokoro_client
+from config.settings import settings
 
-VOICE_PROVIDER = os.getenv('VOICE_PROVIDER', 'kokoro')  # Kokoro is default
+VOICE_PROVIDER = settings.VOICE_PROVIDER  # Kokoro is default
 
 async def generate_audio(text, output_filename):
     """Generate audio using configured provider"""
@@ -11,20 +12,20 @@ async def generate_audio(text, output_filename):
     
     try:
         if VOICE_PROVIDER == 'edge':
-            communicate = edge_tts.Communicate(text, "en-AU-WilliamNeural")
+            communicate = edge_tts.Communicate(text, settings.FALLBACK_VOICE)
             await communicate.save(output_filename)
             
         elif VOICE_PROVIDER == 'kokoro':
             logger.debug(f"Using Kokoro TTS for: {text[:50]}...")
             audio_data = await kokoro_client.create_speech(
                 text=text,
-                voice="af_heart",
-                speed=0.8,
+                voice=settings.DEFAULT_VOICE,
+                speed=settings.DEFAULT_VOICE_SPEED,
                 response_format="mp3"
             )
             if not audio_data:
                 logger.error("Kokoro service failed to generate audio, falling back to edge-tts")
-                communicate = edge_tts.Communicate(text, "en-AU-WilliamNeural")
+                communicate = edge_tts.Communicate(text, settings.FALLBACK_VOICE)
                 await communicate.save(output_filename)
                 return
                 

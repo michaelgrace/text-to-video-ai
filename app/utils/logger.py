@@ -1,6 +1,7 @@
 from loguru import logger
 import sys
 import os
+from config.settings import settings
 
 def setup_logger():
     # Remove default logger
@@ -19,9 +20,9 @@ def setup_logger():
     # File output for debugging
     if log_level == "DEBUG":
         logger.add(
-            "output/logs/debug.log",
-            rotation="500 MB",
-            retention="10 days",
+            settings.DEBUG_LOG_FILE,
+            rotation=settings.LOG_ROTATION,
+            retention=settings.LOG_RETENTION,
             level="DEBUG"
         )
 

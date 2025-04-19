@@ -1,90 +1,92 @@
-# Text To Video AI 🔥
+# Text-To-Video AI 🎬
 
-Generate video from text using AI
+Generate engaging videos from text using AI. This project combines OpenAI's GPT for script generation, Pexels for video content, and advanced text-to-speech for narration.
 
-If you wish to add Text to Video into your application, here is an api to create video from text :- https://docs.vadoo.tv/docs/guide/create-an-ai-video
+## Features
 
-### Youtube Tutorial -> https://www.youtube.com/watch?v=AXo6VfRUgic
+- 🤖 AI-powered script generation
+- 🎥 Automatic video content selection and assembly
+- 🔊 High-quality text-to-speech narration
+- 📝 Automatic caption generation and synchronization
+- 🖥️ GPU-accelerated video processing (where available)
+- 🎨 Theme-based content selection
+- 💾 Smart content caching
 
-### Medium tutorial -> https://medium.com/@anilmatcha/text-to-video-ai-how-to-create-videos-for-free-a-complete-guide-a25c91de50b8
-
-### Demo Video
-
-https://github.com/user-attachments/assets/1e440ace-8560-4e12-850e-c532740711e7
-
-### 🌟 Show Support
-
-If you enjoy using Text to Video AI, we'd appreciate your support with a star ⭐ on our repository. Your encouragement is invaluable and inspires us to continually improve and expand Text to Video AI. Thank you, and happy content creation! 🎉
-
-[![GitHub star chart](https://img.shields.io/github/stars/SamurAIGPT/Text-To-Video-AI?style=social)](https://github.com/SamurAIGPT/Text-To-Video-AI/stargazers)
-
-### Steps to run
-
-Run the following steps
-
-```
-export OPENAI_KEY="api-key"
-export PEXELS_KEY="pexels-key"
-
-pip install -r requirements.text
-
-python app.py "Topic name"
-```
-
-The `python app.py "Topic name"` command runs the `app.py` Python script with a text argument ("Topic name"), which generates a video based on the provided topic. The output will be a file named `rendered_video.mp4`.
+## Quick Start
 
 ### Using Docker (Recommended)
 
-You can also run the application using Docker, which ensures all dependencies are properly installed:
+1. Clone the repository:
+```bash
+git clone https://github.com/YourUsername/Text-To-Video-AI.git
+cd Text-To-Video-AI
+```
 
-1. Set your API keys in a terminal:
-   ```
-   export OPENAI_KEY="your-openai-key"
-   export PEXELS_KEY="your-pexels-key"
-   ```
+2. Set up environment variables:
+```bash
+cp .env.example .env
+# Edit .env with your API keys:
+# - OPENAI_API_KEY
+# - PEXELS_API_KEY
+```
 
-2. Run using docker-compose:
-   ```
-   docker-compose up --build
-   ```
+3. Run with Docker Compose:
+```bash
+docker-compose up --build
+```
 
-3. To specify a custom topic:
-   ```
-   TOPIC="Your Custom Topic" docker-compose up --build
-   ```
+4. Access the web interface:
+```
+http://localhost:7701
+```
 
-The generated video will be available as `rendered_video.mp4` in your project directory.
+### Manual Installation
 
-### Quick Start
+1. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-Without going through the installation hastle here is a simple way to generate videos from text
+2. Run the application:
+```bash
+python app.py "Your topic here"
+```
 
-For a simple way to run the code, checkout the [colab link](/Text_to_Video_example.ipynb)
+## Project Structure
 
-To generate a video, just click on all the cells one by one. Setup your api keys for openai and pexels
+```
+Text-To-Video-AI/
+├── app/                    # Core application code
+│   ├── core/              # Core functionality
+│   └── utils/             # Utility functions
+├── config/                # Configuration files
+├── web/                   # Web interface
+├── exports/              # Generated content
+└── temp/                 # Temporary files
+```
 
-## 💁 Contribution
+## Environment Variables
 
-As an open-source project we are extremely open to contributions. To get started raise an issue in Github or create a pull request
+- `OPENAI_API_KEY`: Your OpenAI API key
+- `PEXELS_API_KEY`: Your Pexels API key
+- `VOICE_PROVIDER`: Voice service provider (default: "kokoro")
+- `DEBUG_MODE`: Enable debug logging (default: false)
 
-### Other useful Video AI Projects
+## Contributing
 
-[AI Influencer generator](https://github.com/SamurAIGPT/AI-Influencer-Generator)
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-[AI Youtube Shorts generator](https://github.com/SamurAIGPT/AI-Youtube-Shorts-Generator/)
+## License
 
-[Faceless Video Generator](https://github.com/SamurAIGPT/Faceless-Video-Generator)
+Distributed under the MIT License. See `LICENSE` for more information.
 
-[AI B-roll generator](https://github.com/Anil-matcha/AI-B-roll)
+## Acknowledgments
 
-[AI video generator](https://www.vadoo.tv/ai-video-generator)
-
-[Text to Video AI](https://www.vadoo.tv/text-to-video-ai)
-
-[Autoshorts AI](https://www.vadoo.tv/autoshorts-ai)
-
-[Pixverse alternative](https://www.vadoo.tv/pixverse-ai)
-
-[Hailuo AI alternative](https://www.vadoo.tv/hailuo-ai)
-
-[Minimax AI alternative](https://www.vadoo.tv/minimax-ai)
+- OpenAI GPT for script generation
+- Pexels for video content
+- MoviePy for video processing
+- Streamlit for the web interface

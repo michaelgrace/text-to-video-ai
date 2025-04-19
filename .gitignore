@@ -15,11 +15,18 @@ scripts/
 *.mp3
 *.wav
 
+
 # Output directories
-output/
+exports/
 temp/
 docs/
 
 # OS files
 .DS_Store
 Thumbs.db
+
+
+# resturctured
+*.dev*
+utility/
+

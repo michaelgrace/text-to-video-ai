@@ -8,6 +8,7 @@ from app.core.generators.video_generator import generate_video_url
 from app.utils.logger import setup_logger
 from app.core.processors.render_engine import get_output_media
 from app.core.processors.video_search_query_generator import getVideoSearchQueriesTimed
+from config.settings import settings
 
 # Initialize logger
 logger = setup_logger()
@@ -19,8 +20,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     SAMPLE_TOPIC = args.topic
-    SAMPLE_FILE_NAME = "audio_tts.wav"
-    VIDEO_SERVER = "pexel"
+    SAMPLE_FILE_NAME = settings.DEFAULT_AUDIO_FILENAME
+    VIDEO_SERVER = settings.VIDEO_SERVER
 
     response = generate_script(SAMPLE_TOPIC)
     logger.debug(f"Generated script: {response}")
@@ -42,13 +43,13 @@ if __name__ == "__main__":
         try:
             background_video_urls = generate_video_url(search_terms, VIDEO_SERVER)
             if not background_video_urls or all(url[1] is None for url in background_video_urls):
-                print("No videos found, using black background")
+                print(settings.ERROR_MESSAGES["NO_VIDEOS_FOUND"])
                 # Create a single segment covering the entire audio duration
                 audio_duration = float(timed_captions[-1][0][1])  # Get end time of last caption
                 background_video_urls = [[[0, audio_duration], None]]
             print(background_video_urls)
         except Exception as e:
-            print(f"Pexel retrieval failure: {str(e)}. Using black background.")
+            print(settings.ERROR_MESSAGES["PEXEL_FAILURE"].format(str(e)))
             audio_duration = float(timed_captions[-1][0][1])
             background_video_urls = [[[0, audio_duration], None]]
     else:

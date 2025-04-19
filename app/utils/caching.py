@@ -2,10 +2,11 @@ import os
 import json
 import hashlib
 from pathlib import Path
+from config.settings import settings
 
 class VideoCache:
     def __init__(self):
-        self.cache_dir = Path("temp/pexels_cache")
+        self.cache_dir = Path(settings.CACHE_DIR)
         self.video_dir = self.cache_dir / "videos"
         self.metadata_dir = self.cache_dir / "metadata"
         self._ensure_dirs()

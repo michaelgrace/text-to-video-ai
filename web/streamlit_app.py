@@ -3,11 +3,15 @@ import subprocess
 import os
 import time
 from pathlib import Path
+from config.settings import settings
 
-st.set_page_config(page_title="Text-To-Video AI", page_icon="🎬")
+st.set_page_config(
+    page_title=settings.APP_NAME, 
+    page_icon=settings.APP_ICON
+)
 
-st.title("Text-To-Video AI 🔥")
-st.write("Generate video from text using AI")
+st.title(f"{settings.APP_NAME} 🔥")
+st.write(settings.APP_DESCRIPTION)
 
 # Input field for API keys
 openai_key = st.text_input("OpenAI API Key", type="password", 
@@ -16,7 +20,7 @@ pexels_key = st.text_input("Pexels API Key", type="password",
                           value=os.environ.get("PEXELS_API_KEY", ""))
 
 # Input field for topic
-topic = st.text_input("Topic for Video", value="Interesting Facts About Space")
+topic = st.text_input("Topic for Video")
 
 def format_filename(topic):
     # Replace spaces with hyphens and remove special characters
@@ -28,13 +32,13 @@ def format_filename(topic):
 # Process button
 if st.button("Generate Video"):
     if not openai_key or not pexels_key:
-        st.error("Please provide both API keys")
+        st.error(settings.ERROR_MESSAGES["API_KEYS_MISSING"])
     else:
         # Set environment variables
         os.environ["OPENAI_API_KEY"] = openai_key
         os.environ["PEXELS_API_KEY"] = pexels_key
         
-        with st.spinner("Generating your video... This might take a while."):
+        with st.spinner(settings.GENERATING_MESSAGE):
             try:
                 # Run the app.py script with the given topic
                 process = subprocess.Popen(["python", "app.py", topic], 
@@ -54,10 +58,10 @@ if st.button("Generate Video"):
                 
                 # Show output in real-time with stage tracking
                 stages = {
-                    "script:": (script_placeholder, "🤖 Generating script..."),
-                    "audio_tts": (audio_placeholder, "🎵 Creating audio..."),
-                    "timed_captions": (captions_placeholder, "📝 Generating captions..."),
-                    "background_video": (video_placeholder, "🎬 Processing video...")
+                    "script:": (script_placeholder, settings.PROGRESS_STAGES["script"]["name"]),
+                    "audio_tts": (audio_placeholder, settings.PROGRESS_STAGES["audio"]["name"]),
+                    "timed_captions": (captions_placeholder, settings.PROGRESS_STAGES["captions"]["name"]),
+                    "background_video": (video_placeholder, settings.PROGRESS_STAGES["video"]["name"])
                 }
                 
                 current_progress = 0
@@ -74,7 +78,7 @@ if st.button("Generate Video"):
                         for key, (placeholder, message) in stages.items():
                             if key in output.lower():
                                 placeholder.info(message)
-                                current_progress += 25
+                                current_progress += settings.PROGRESS_STAGES[key.replace(":", "")]["weight"]
                                 progress_bar.progress(min(current_progress, 100))
                         
                         # Show all output in main placeholder
@@ -84,22 +88,25 @@ if st.button("Generate Video"):
                 if process.returncode == 0:
                     st.success("Video generated successfully!")
                     
-                    # Check if the output file exists
-                    output_file = Path("rendered_video.mp4")
-                    if output_file.exists():
-                        # Display the video
-                        st.video(str(output_file))
-                        
-                        # Add download button with formatted filename
-                        with open(output_file, "rb") as file:
-                            st.download_button(
-                                label="Download Video",
-                                data=file,
-                                file_name=format_filename(topic),  # Use formatted topic name
-                                mime="video/mp4"
-                            )
-                    else:
-                        st.error("Video file not found. Check the console output for details.")
+                    try:
+                        # Look for video in container root where render_engine.py writes it
+                        output_file = Path("/app") / settings.DEFAULT_OUTPUT_FILENAME
+                        if output_file.exists():
+                            # Display the video
+                            st.video(str(output_file))
+                            
+                            # Add download button with formatted filename
+                            with open(output_file, "rb") as file:
+                                st.download_button(
+                                    label="Download Video",
+                                    data=file,
+                                    file_name=format_filename(topic),  # Use formatted topic name
+                                    mime="video/mp4"
+                                )
+                        else:
+                            st.error(settings.ERROR_MESSAGES["VIDEO_NOT_FOUND"])
+                    except Exception as e:
+                        st.error(f"An error occurred: {str(e)}")
                 else:
                     error = process.stderr.read()
                     st.error(f"Error generating video: {error}")

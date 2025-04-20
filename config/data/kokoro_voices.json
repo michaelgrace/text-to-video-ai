@@ -1,0 +1,10 @@
+{
+    "voices": [
+        {
+            "id": "af_heart",
+            "name": "Heart",
+            "language": "en",
+            "gender": "female"
+        }
+    ]
+}

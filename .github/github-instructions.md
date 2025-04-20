@@ -72,6 +72,31 @@ Must preserve:
 
 ## Technical Standards
 
+### Code Formatting Standards
+1. Code Changes Format:
+   - Always use `// ...existing code...` or `# ...existing code...` (language dependent) to indicate unchanged sections
+   - Keep changes concise and focused
+   - Show only the minimal context needed to understand the change
+
+2. Multiple Changes in Same File:
+   - Use a single code block per file
+   - Show changes in their correct relative positions
+   - Maintain proper context with existing code markers
+
+3. Filepath Conventions:
+   - Include exact filepath as a comment at the start of every code block
+   - Preserve original slash style (forward or backward)
+   - Format: `// filepath: d:\path\to\file.ext`
+
+Example of proper code block formatting:
+```python
+# filepath: d:\path\to\example.py
+# ...existing code...
+def process_video(input_file, output_file, quality=HIGH_QUALITY):
+    """Process video with specified quality"""
+    # ...existing code...
+```
+
 ### Build and Performance
 - Keep dependencies in separate layers for better Docker caching
 - Preserve pip cache between builds for faster installation
@@ -106,26 +131,6 @@ Must preserve:
 4. End with instructions on how to test the changes
 5. If there are multiple approaches possible, ASK before implementing
 6. Test with Docker builds
-
-### Git Commit Process
-When clicking the COMMIT button in your IDE:
-1. Local Changes:
-   - Staged changes are committed to your local repository
-   - A commit hash is generated
-   - Your local branch is updated
-
-2. Remote Sync Required:
-   - Changes are NOT automatically pushed to remote
-   - You must explicitly PUSH to sync with remote:
-     ```bash
-     git push origin <branch-name>
-     ```
-   - Or use your IDE's "Push" button/command
-
-3. Best Practices:
-   - Write clear commit messages
-   - Pull before pushing to avoid conflicts
-   - Verify changes are pushed using GitHub web interface
 
 ## Why These Guidelines Matter
 

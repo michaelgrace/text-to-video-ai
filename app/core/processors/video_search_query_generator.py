@@ -3,7 +3,7 @@ import os
 import json
 import re
 from datetime import datetime
-from utility.utils import log_response,LOG_TYPE_GPT
+from app.utils.helpers import log_response, LOG_TYPE_GPT
 
 # if len(os.environ.get("GROQ_API_KEY")) > 30:
 #     from groq import Groq
@@ -17,7 +17,11 @@ model = "gpt-4-turbo" # DO NOT REMOVE "gpt-4o"
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 client = OpenAI(api_key=OPENAI_API_KEY)
 
+<<<<<<< HEAD:utility/video/video_search_query_generator.py
 log_directory = "exports/logs/gpt_logs"
+=======
+# log_directory = ".logs/gpt_logs"
+>>>>>>> 31d6d1e98d7b9d56a904e5f393bb0233ee47fd33:app/core/processors/video_search_query_generator.py
 
 prompt = """# Instructions
 
@@ -91,6 +95,8 @@ Timed Captions:{}
     return text
 
 def merge_empty_intervals(segments):
+    if not segments:  # Add this check
+        return [[[0, 30], None]]  # Return a default segment that covers 30 seconds
     merged = []
     i = 0
     while i < len(segments):

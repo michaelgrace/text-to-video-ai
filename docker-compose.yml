@@ -11,10 +11,26 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
+<<<<<<< HEAD
         BUILDKIT_INLINE_CACHE: 1  # This is sufficient for cache management
+=======
+        BUILDKIT_INLINE_CACHE: 1        
+>>>>>>> 31d6d1e98d7b9d56a904e5f393bb0233ee47fd33
         CACHEBUST: ${CACHEBUST:-1}
-    image: text-to-video:latest
+      # Original cache configuration
+      # cache_from:
+      #   - type=local,src=/tmp/.buildx-cache
+      #   - type=registry,ref=text-to-video:latest
+      # cache_to:
+      #   - type=local,dest=/tmp/.buildx-cache-new,mode=max
+      # Simplified cache configuration for development
+      cache_from:
+        - text-to-video:latest
+      pull: true
+      target: dev  # Explicitly use dev stage
+    image: text-to-video:latest # change name to your desired image name
     volumes:
+<<<<<<< HEAD
       - ./exports:/app/exports
       - ./temp:/app/temp
       - ./.logs:/app/.logs
@@ -32,26 +48,69 @@ services:
       # - MAX_BG_VIDEOS=${MAX_BG_VIDEOS}
       # - PHOTO_OUTPUT_DIR=${PHOTO_OUTPUT_DIR}
 
+=======
+      - ./exports:/app/exports  # Changed from output
+      - ./temp:/app/temp
+      - ./app:/app/app
+      - ./web:/app/web
+      - ./config:/app/config
+      - ./app.py:/app/app.py
+    environment:
+      # Core API Keys
+      - OPENAI_API_KEY=${OPENAI_API_KEY}      
+>>>>>>> 31d6d1e98d7b9d56a904e5f393bb0233ee47fd33
       - PEXELS_API_KEY=${PEXELS_API_KEY}
-      - PEXELS_PHOTO_API_URL=${PEXELS_PHOTO_API_URL}
-      - PEXELS_PHOTO_API_URL_CURATED=${PEXELS_PHOTO_API_URL_CURATED}
-      - PEXELS_VIDEO_API_URL=${PEXELS_VIDEO_API_URL}
-      - PEXELS_VIDEO_API_URL_CURATED=${PEXELS_VIDEO_API_URL_CURATED}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}
+      # - TOGETHER_API_KEY=${TOGETHER_API_KEY}  # Commented as not currently used
       
+      # Voice Services
       - VOICE_PROVIDER=${VOICE_PROVIDER}
       - KOKORO_SERVICE_URL=${KOKORO_SERVICE_URL}
       - ELEVENLABS_SERVICE_URL=${ELEVENLABS_SERVICE_URL}
+<<<<<<< HEAD
       #- ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}      
       - TIKTOK_SERVICE_URL=${TIKTOK_SERVICE_URL}
       #- TOGETHER_API_KEY=${TOGETHER_API_KEY}    
       - LIBVA_DRIVER_NAME=i965  # Intel GPU driver
       - FFMPEG_HWACCEL=vaapi    # Enable VAAPI hardware acceleration
+=======
+            - TIKTOK_SERVICE_URL=${TIKTOK_SERVICE_URL}  
+      
+      # Debug settings
+      - DEBUG_MODE=${DEBUG_MODE:-false}
+      - PRESERVE_TEMP=${PRESERVE_TEMP:-false}
+      
+      # CPU optimization 
+      - OMP_NUM_THREADS=8
+      - MKL_NUM_THREADS=8
+      - NUMEXPR_NUM_THREADS=8
+      - PYTORCH_ENABLE_CPU_FALLBACK=1
+      # FFmpeg optimization 
+      - FFREPORT=file=/app/exports/logs/ffmpeg/ffmpeg_report.log:level=32
+      - AV_LOG_FORCE_COLOR=1
+      - FFMPEG_THREADS=8
+      # Intel GPU support
+      - LIBVA_DRIVER_NAME=iHD
+      # Hardware acceleration flags for FFmpeg
+      - FFMPEG_HWACCEL=vaapi
+      - FFMPEG_VAAPI_DEVICE=/dev/dri/renderD128
+      # Add BuildKit settings
+      - DOCKER_BUILDKIT=1
+      - COMPOSE_DOCKER_CLI_BUILD=1
+    devices:
+      - /dev/dri:/dev/dri  # Give access to Intel GPU
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+    runtime: runc
+>>>>>>> 31d6d1e98d7b9d56a904e5f393bb0233ee47fd33
     ports:
       - "7701:7701"
     networks:
       - ttv-network
       - crown-network
-    command: streamlit run streamlit_app.py --server.port=7701 --server.address=0.0.0.0
+    command: streamlit run web/streamlit_app.py --server.port=7701 --server.address=0.0.0.0
 
 networks:
   ttv-network:

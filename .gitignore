@@ -7,21 +7,36 @@ __pycache__/
 *.py[cod]
 *$py.class
 venv/
+<<<<<<< HEAD
 exports/logs/
+=======
+.logs/
+scripts/
+>>>>>>> 31d6d1e98d7b9d56a904e5f393bb0233ee47fd33
 
 # Media files
 *.mp4
 *.mp3
 *.wav
 
+
 # Output directories
 exports/
 temp/
 docs/
+<<<<<<< HEAD
 app/
 config/
 .logs/
+=======
+>>>>>>> 31d6d1e98d7b9d56a904e5f393bb0233ee47fd33
 
 # OS files
 .DS_Store
 Thumbs.db
+
+
+# resturctured
+*.dev*
+utility/
+

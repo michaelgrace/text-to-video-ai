@@ -6,7 +6,7 @@ import asyncio
 import whisper_timestamped as whisper
 
 # Import our MoviePy config first
-from utility.render.moviepy_config import *
+# from utility.render.moviepy_config import *
 
 from utility.script.script_generator import generate_script
 from utility.audio.audio_generator import generate_audio

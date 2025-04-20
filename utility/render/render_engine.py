@@ -2,10 +2,10 @@ import os
 import sys
 
 # Add the project directory to the path to ensure imports work correctly
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+# sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 # Import our MoviePy config first to ensure proper initialization
-from utility.render.moviepy_config import *
+# from utility.render.moviepy_config import *
 
 import time
 import tempfile
@@ -37,14 +37,13 @@ def get_program_path(program_name):
     program_path = search_program(program_name)
     return program_path
 
-def get_output_media(audio_file_path, timed_captions, background_video_data, video_server, preset='veryfast'):
+def get_output_media(audio_file_path, timed_captions, background_video_data, video_server, preset='ultrafast'):
     """
-    preset options for VAAPI:
+    CPU-optimized preset options:
     - ultrafast: Fastest encoding, larger file size
     - superfast: Very fast encoding
-    - veryfast: Good balance of speed/quality (default)
-    - faster/fast: Better quality, slower encoding
-    - medium/slow/slower/veryslow: Best quality, much slower encoding
+    - veryfast: Good balance of speed/quality
+    - medium: Better quality, slower encoding
     """
     OUTPUT_FILE_NAME = "rendered_video.mp4"
     magick_path = get_program_path("magick")
@@ -84,18 +83,22 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
         video.duration = audio.duration
         video.audio = audio
 
-    # Use Intel GPU acceleration through VAAPI
+    # CPU-optimized encoding configuration
+    threads = os.environ.get('FFMPEG_THREADS', '8')
     video.write_videofile(
         OUTPUT_FILE_NAME,
-        codec='h264',  # Change back to h264 until we verify VAAPI support
+        codec='libx264',  # CPU encoder
         audio_codec='aac',
         fps=25,
-        preset=preset,  # Configurable preset
-        # Comment out VAAPI parameters until we can verify the correct syntax
-        # ffmpeg_params=[
-        #     '-vaapi_device', '/dev/dri/renderD128',
-        #     '-vf', 'format=nv12|vaapi,hwupload'
-        # ]
+        preset=preset,
+        ffmpeg_params=[
+            '-threads', threads,
+            '-preset', 'ultrafast',
+            '-crf', '28',  # Lower quality but faster encoding
+            '-pix_fmt', 'yuv420p',
+            '-movflags', '+faststart',
+            '-max_muxing_queue_size', '1024'
+        ]
     )
     
     # Clean up downloaded files

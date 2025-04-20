@@ -11,13 +11,14 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        BUILDKIT_INLINE_CACHE: 1  # This is sufficient for cache management
+        BUILDKIT_INLINE_CACHE: 1
         CACHEBUST: ${CACHEBUST:-1}
-      cache_from:
-        - text-to-video:latest
+      # Remove problematic cache configuration
+      # cache_from:
+      #   - text-to-video:latest
       pull: true
-      target: dev  # Explicitly use dev stage
-    image: text-to-video:latest # change name to your desired image name
+      target: dev
+    image: text-to-video:latest 
     volumes:
       - ./exports:/app/exports
       - ./temp:/app/temp
@@ -48,13 +49,32 @@ services:
       - TIKTOK_SERVICE_URL=${TIKTOK_SERVICE_URL}
       #- TOGETHER_API_KEY=${TOGETHER_API_KEY}    
       - LIBVA_DRIVER_NAME=i965  # Intel GPU driver
+      - LIBVA_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri
+      - MESA_D3D12_DEFAULT_ADAPTER_NAME=Intel(R) UHD Graphics  # Force WSL to use Intel GPU
+      - DISPLAY=${DISPLAY}
       - FFMPEG_HWACCEL=vaapi    # Enable VAAPI hardware acceleration
+      # CPU optimization
+      - OMP_NUM_THREADS=8
+      - MKL_NUM_THREADS=8
+      - NUMEXPR_NUM_THREADS=8
+      - PYTORCH_ENABLE_CPU_FALLBACK=1
+      # FFmpeg optimization
+      - FFREPORT=file=/app/tmp/ffmpeg_report.log:level=32
+      - AV_LOG_FORCE_COLOR=1
+      - FFMPEG_THREADS=8
+      # GPU configuration - both options available
+      - LIBVA_DRIVER_NAME=${GPU_DRIVER:-i965}  # Fallback to i965 if not set
+      - FFMPEG_HWACCEL=vaapi
+      - FFMPEG_VAAPI_DEVICE=/dev/dri/renderD128
+    runtime: "runc"
     ports:
       - "7701:7701"
     networks:
       - ttv-network
       - crown-network
-    # command: streamlit run streamlit_app.py --server.port=7701 --server.address=0.0.0.0
+    command: streamlit run streamlit_app.py --server.port=7701 --server.address=0.0.0.0
+    # Keep original command (commented but preserved)
+    # command: streamlit run web/streamlit_app.py --server.port=7701 --server.address=0.0.0.0
 
 networks:
   ttv-network:

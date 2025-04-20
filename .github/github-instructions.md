@@ -2,11 +2,10 @@
 
 ## Hardware/Software Requirements
 
-### My Local System Specifications
-- Windows 11 Pro
-- 32GB RAM
+### System Specifications
+- Windows 11 Pro 32GB RAM
 - Dual GPU Setup:
-- Intel UHD Graphics (integrated, shared memory) - Use this GPU for app 
+  - Intel UHD Graphics (integrated, shared memory)
   - NVIDIA Quadro P1000 (4GB dedicated)
 - Docker Desktop with WSL2
 - No local Python installation required (handled by Docker)
@@ -15,36 +14,38 @@
 - Initial build time: ~15-20 minutes
 - Subsequent builds with cache: ~5-10 minutes
 - Video generation time: ~2-4 minutes per minute of output
-- Hardware acceleration using Intel GPU via VAAPI
+- Hardware acceleration using Intel UHD preferred over NVIDIA due to memory management
 
 ### Performance Notes
 - Docker memory allocation critical for build performance
 - FFmpeg uses Intel QuickSync via VAAPI
 - Temporary files managed through volume mounts
-- Build caching optimized through:
-  - pip cache persistence
-  - BuildKit layers
-  - Proper dependency ordering
+- Video processing benefits from shared system memory with integrated GPU
 
 ### GPU Configuration Notes
-- Intel GPU support:
-  - Uses VAAPI for hardware acceleration
-  - Requires intel-media-va-driver-non-free
-  - Configured through docker-compose devices mount
-  - Environment variables for VAAPI configuration
+- Primary GPU: Intel UHD
+  - Preferred for this project
+  - Better memory management with shared RAM
+  - Avoids dedicated VRAM limitations
+- Secondary GPU: NVIDIA Quadro P1000
+  - Available but not primary for video processing
+  - 4GB VRAM limitation can cause issues
 
-### Docker Configuration
-- BuildKit enabled
-- Volume mounts for:
-  - Source code
-  - Output files
-  - Temporary files
-  - pip cache
-- GPU device pass-through configured
+### Docker Desktop Configuration
+- WSL2 backend required
+- Recommended memory allocation: 16GB
+- GPU access enabled through Docker Desktop settings
 
 # GitHub Contribution Guidelines
 
 ## Critical Guidelines
+
+### GITHUB CHECKINS
+- **NEVER** suggest any code that will delete my current files
+- **ALWAYS** prompt for local backup before git operations
+- **VERIFY** .gitignore isn't excluding critical folders
+- **CHECK** working directory before stash operations
+- **CONFIRM** files are tracked before commits
 
 ### DO NOT REMOVE Comments and Code
 - **NEVER** modify code outside the scope of the current task
@@ -72,31 +73,6 @@ Must preserve:
 
 ## Technical Standards
 
-### Code Formatting Standards
-1. Code Changes Format:
-   - Always use `// ...existing code...` or `# ...existing code...` (language dependent) to indicate unchanged sections
-   - Keep changes concise and focused
-   - Show only the minimal context needed to understand the change
-
-2. Multiple Changes in Same File:
-   - Use a single code block per file
-   - Show changes in their correct relative positions
-   - Maintain proper context with existing code markers
-
-3. Filepath Conventions:
-   - Include exact filepath as a comment at the start of every code block
-   - Preserve original slash style (forward or backward)
-   - Format: `// filepath: d:\path\to\file.ext`
-
-Example of proper code block formatting:
-```python
-# filepath: d:\path\to\example.py
-# ...existing code...
-def process_video(input_file, output_file, quality=HIGH_QUALITY):
-    """Process video with specified quality"""
-    # ...existing code...
-```
-
 ### Build and Performance
 - Keep dependencies in separate layers for better Docker caching
 - Preserve pip cache between builds for faster installation
@@ -105,7 +81,7 @@ def process_video(input_file, output_file, quality=HIGH_QUALITY):
 
 ### Directory Structure
 - Maintain the existing directory structure:
-  - `/exports` - Generated files
+  - `/output` - Generated files
   - `/temp` - Temporary processing files
   - `/utility` - Core functionality
   - `/.logs` - API response logs
@@ -131,6 +107,26 @@ def process_video(input_file, output_file, quality=HIGH_QUALITY):
 4. End with instructions on how to test the changes
 5. If there are multiple approaches possible, ASK before implementing
 6. Test with Docker builds
+
+### Git Commit Process
+When clicking the COMMIT button in your IDE:
+1. Local Changes:
+   - Staged changes are committed to your local repository
+   - A commit hash is generated
+   - Your local branch is updated
+
+2. Remote Sync Required:
+   - Changes are NOT automatically pushed to remote
+   - You must explicitly PUSH to sync with remote:
+     ```bash
+     git push origin <branch-name>
+     ```
+   - Or use your IDE's "Push" button/command
+
+3. Best Practices:
+   - Write clear commit messages
+   - Pull before pushing to avoid conflicts
+   - Verify changes are pushed using GitHub web interface
 
 ## Why These Guidelines Matter
 

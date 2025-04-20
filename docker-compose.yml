@@ -20,13 +20,14 @@ services:
       target: dev
     image: text-to-video:latest 
     volumes:
-      - ./exports:/app/exports
+      - ./exports:/app/exports                 # Contains logs directory
       - ./temp:/app/temp
-      - ./.logs:/app/.logs
-      - ./utility:/app/utility
+      # - ./.logs:/app/.logs                  # Comment out or remove this line
+      - ./utility:/app/utility     # Keep original working code
+      - ./app:/app/app            # Add new structure
       - ./app.py:/app/app.py
       - ./streamlit_app.py:/app/streamlit_app.py
-      - pip-cache:/root/.cache/pip  # Add pip cache volume
+      - pip-cache:/root/.cache/pip
     devices:
       - /dev/dri:/dev/dri  # Add Intel GPU device access
     environment:
@@ -50,7 +51,7 @@ services:
       #- TOGETHER_API_KEY=${TOGETHER_API_KEY}    
       - LIBVA_DRIVER_NAME=i965  # Intel GPU driver
       - LIBVA_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri
-      - MESA_D3D12_DEFAULT_ADAPTER_NAME=Intel(R) UHD Graphics  # Force WSL to use Intel GPU
+      - MESA_D3D12_DEFAULT_ADAPTER_NAME=Intel(R) UHD Graphics  # Force WSL to use Intel GPUdefault display
       - DISPLAY=${DISPLAY}
       - FFMPEG_HWACCEL=vaapi    # Enable VAAPI hardware acceleration
       # CPU optimization

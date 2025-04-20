@@ -1,6 +1,5 @@
 import os
 import sys
-import glob
 
 # Add the project directory to the path to ensure imports work correctly
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -38,16 +37,6 @@ def get_program_path(program_name):
     program_path = search_program(program_name)
     return program_path
 
-def cleanup_logs():
-    """Clean up old FFmpeg log files"""
-    log_dir = "/app/tmp"
-    if os.path.exists(log_dir):
-        for log_file in glob.glob(f"{log_dir}/ffmpeg_report*.log"):
-            try:
-                os.remove(log_file)
-            except Exception as e:
-                print(f"Warning: Could not remove log file {log_file}: {e}")
-
 def get_output_media(audio_file_path, timed_captions, background_video_data, video_server, preset='ultrafast'):
     """
     CPU-optimized preset options:
@@ -56,9 +45,6 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
     - veryfast: Good balance of speed/quality
     - medium: Better quality, slower encoding
     """
-    # Clean up old logs before starting
-    cleanup_logs()
-
     OUTPUT_FILE_NAME = "rendered_video.mp4"
     magick_path = get_program_path("magick")
     print(magick_path)
@@ -97,7 +83,7 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
         video.duration = audio.duration
         video.audio = audio
 
-    # CPU-optimized encoding configuration (removed logging)
+    # CPU-optimized encoding configuration
     threads = os.environ.get('FFMPEG_THREADS', '8')
     video.write_videofile(
         OUTPUT_FILE_NAME,
@@ -108,7 +94,7 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
         ffmpeg_params=[
             '-threads', threads,
             '-preset', 'ultrafast',
-            '-crf', '28',
+            '-crf', '28',  # Lower quality but faster encoding
             '-pix_fmt', 'yuv420p',
             '-movflags', '+faststart',
             '-max_muxing_queue_size', '1024'
@@ -119,8 +105,5 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
     for (t1, t2), video_url in background_video_data:
         video_filename = tempfile.NamedTemporaryFile(delete=False).name
         os.remove(video_filename)
-
-    # Clean up FFmpeg logs after successful completion
-    cleanup_logs()
 
     return OUTPUT_FILE_NAME

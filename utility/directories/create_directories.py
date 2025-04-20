@@ -6,10 +6,10 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 # Create necessary directories for the application
 directories = [
     'output',
-    'output/photos',
-    'output/videos',
-    'output/audio',
-    'output/captions',    
+    'exports/photos',
+    'exports/videos',
+    'exports/audio',
+    'exports/captions',    
     'temp'
 ]
 

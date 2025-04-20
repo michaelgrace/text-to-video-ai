@@ -24,6 +24,6 @@ temp/
 *.mp4
 *.wav
 *.mp3
-.logs/
-output/
+exports/logs/
+exports/
 data/

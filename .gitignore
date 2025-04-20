@@ -7,7 +7,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 venv/
-.logs/
+exports/logs/
 
 # Media files
 *.mp4
@@ -15,8 +15,12 @@ venv/
 *.wav
 
 # Output directories
-output/
+exports/
 temp/
+docs/
+app/
+config/
+.logs/
 
 # OS files
 .DS_Store

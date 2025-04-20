@@ -1,5 +1,13 @@
-import time
 import os
+import sys
+
+# Add the project directory to the path to ensure imports work correctly
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+# Import our MoviePy config first to ensure proper initialization
+from utility.render.moviepy_config import *
+
+import time
 import tempfile
 import zipfile
 import platform
@@ -29,7 +37,15 @@ def get_program_path(program_name):
     program_path = search_program(program_name)
     return program_path
 
-def get_output_media(audio_file_path, timed_captions, background_video_data, video_server):
+def get_output_media(audio_file_path, timed_captions, background_video_data, video_server, preset='veryfast'):
+    """
+    preset options for VAAPI:
+    - ultrafast: Fastest encoding, larger file size
+    - superfast: Very fast encoding
+    - veryfast: Good balance of speed/quality (default)
+    - faster/fast: Better quality, slower encoding
+    - medium/slow/slower/veryslow: Best quality, much slower encoding
+    """
     OUTPUT_FILE_NAME = "rendered_video.mp4"
     magick_path = get_program_path("magick")
     print(magick_path)
@@ -68,7 +84,19 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
         video.duration = audio.duration
         video.audio = audio
 
-    video.write_videofile(OUTPUT_FILE_NAME, codec='libx264', audio_codec='aac', fps=25, preset='veryfast')
+    # Use Intel GPU acceleration through VAAPI
+    video.write_videofile(
+        OUTPUT_FILE_NAME,
+        codec='h264',  # Change back to h264 until we verify VAAPI support
+        audio_codec='aac',
+        fps=25,
+        preset=preset,  # Configurable preset
+        # Comment out VAAPI parameters until we can verify the correct syntax
+        # ffmpeg_params=[
+        #     '-vaapi_device', '/dev/dri/renderD128',
+        #     '-vf', 'format=nv12|vaapi,hwupload'
+        # ]
+    )
     
     # Clean up downloaded files
     for (t1, t2), video_url in background_video_data:

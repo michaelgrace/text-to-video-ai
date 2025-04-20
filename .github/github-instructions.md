@@ -1,3 +1,47 @@
+# Development Environment Configuration
+
+## Hardware/Software Requirements
+
+### My Local System Specifications
+- Windows 11 Pro
+- 32GB RAM
+- Dual GPU Setup:
+- Intel UHD Graphics (integrated, shared memory) - Use this GPU for app 
+  - NVIDIA Quadro P1000 (4GB dedicated)
+- Docker Desktop with WSL2
+- No local Python installation required (handled by Docker)
+
+### Build Time Considerations
+- Initial build time: ~15-20 minutes
+- Subsequent builds with cache: ~5-10 minutes
+- Video generation time: ~2-4 minutes per minute of output
+- Hardware acceleration using Intel GPU via VAAPI
+
+### Performance Notes
+- Docker memory allocation critical for build performance
+- FFmpeg uses Intel QuickSync via VAAPI
+- Temporary files managed through volume mounts
+- Build caching optimized through:
+  - pip cache persistence
+  - BuildKit layers
+  - Proper dependency ordering
+
+### GPU Configuration Notes
+- Intel GPU support:
+  - Uses VAAPI for hardware acceleration
+  - Requires intel-media-va-driver-non-free
+  - Configured through docker-compose devices mount
+  - Environment variables for VAAPI configuration
+
+### Docker Configuration
+- BuildKit enabled
+- Volume mounts for:
+  - Source code
+  - Output files
+  - Temporary files
+  - pip cache
+- GPU device pass-through configured
+
 # GitHub Contribution Guidelines
 
 ## Critical Guidelines
@@ -36,7 +80,7 @@ Must preserve:
 
 ### Directory Structure
 - Maintain the existing directory structure:
-  - `/output` - Generated files
+  - `/exports` - Generated files
   - `/temp` - Temporary processing files
   - `/utility` - Core functionality
   - `/.logs` - API response logs

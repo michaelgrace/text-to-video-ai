@@ -17,7 +17,7 @@ model = "gpt-4-turbo" # DO NOT REMOVE "gpt-4o"
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-log_directory = ".logs/gpt_logs"
+log_directory = "exports/logs/gpt_logs"
 
 prompt = """# Instructions
 

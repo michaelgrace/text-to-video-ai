@@ -1,52 +1,75 @@
-aiohttp==3.9.5
-aiosignal==1.3.1
-annotated-types==0.7.0
-anyio==4.4.0
-attrs==23.2.0
-certifi==2024.7.4
-charset-normalizer==3.3.2
-Cython==3.0.10
-decorator==4.4.2
-distro==1.9.0
-dtw-python==1.5.1
+# Core Required Dependencies
+aiohttp==3.9.5  # Required by edge-tts
+aiosignal==1.3.1  # Required by aiohttp
+annotated-types==0.7.0  # Required by pydantic
+attrs==23.2.0  # Required by aiohttp
+certifi==2024.7.4  # Required by requests
+charset-normalizer==3.3.2  # Required by requests/aiohttp
+decorator>=4.0.11  # Required by moviepy
 edge-tts==6.1.12
-filelock==3.14.0
-frozenlist==1.4.1
-fsspec==2024.6.0
-h11==0.14.0
-httpcore==1.0.5
+ffmpeg-python
+filelock==3.14.0  # Required by torch
+frozenlist==1.4.1  # Required by aiohttp
+h11==0.14.0  # Required by httpx
+httpcore==1.0.5  # Required by httpx
 httpx==0.27.0
-idna==3.7
+idna==3.7  # Required by requests/httpx
 imageio==2.34.1
 imageio-ffmpeg==0.5.1
-Jinja2==3.1.4
-llvmlite==0.42.0
-MarkupSafe==2.1.5
-more-itertools==10.2.0
+loguru==0.7.2
 moviepy==1.0.3
-mpmath==1.3.0
-multidict==6.0.5
-networkx==3.3
-numba==0.59.1
+multidict==6.0.5  # Required by aiohttp
 numpy==1.26.4
 openai==1.31.1
-openai-whisper==20231117
-pillow==10.3.0
-proglog==0.1.10
-pydantic==2.7.3
-pydantic_core==2.18.4
-regex==2024.5.15
+openai-whisper==20231117  # Required for whisper-timestamped
+Pillow==10.3.0
+proglog==0.1.10  # Required by moviepy
+pydantic==2.7.3  # Will be needed for FastAPI
+pydantic_core==2.18.4  # Required by pydantic
+python-dotenv==1.0.0
+regex==2024.5.15  # Required for text processing
 requests==2.32.3
-scipy==1.13.1
-sniffio==1.3.1
-sympy==1.12.1
+sniffio==1.3.1  # Required by httpx
+streamlit==1.31.1
 tiktoken==0.7.0
-torch==2.3.1
-tqdm==4.66.4
-typing_extensions==4.12.1
-urllib3==2.2.1
+
+# Original torch specifications (commented but preserved)
+# torch==2.1.0  
+# torch==2.3.1+cpu  # CPU optimized version with Intel MKL support
+
+# Fixed torch version with correct CPU support
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.1.2+cpu
+
+tqdm>=4.11.2      # Required for progress bars
+typing_extensions==4.12.1  # Required by multiple packages
+urllib3==2.2.1  # Required by requests
 whisper-timestamped==1.15.4
-yarl==1.9.4
-groq==0.11.0
-python-dotenv
-streamlit
+yarl==1.9.4  # Required by aiohttp
+
+# API Development Dependencies (New)
+# fastapi==0.109.2
+# flask==3.0.2
+# flask-cors==4.0.0
+# uvicorn==0.27.1
+# gunicorn==21.2.0
+# python-multipart==0.0.9
+# sqlalchemy==2.0.27  # For database models
+# alembic==1.13.1    # For database migrations
+
+# Currently Unused Dependencies (Preserved)
+# anyio==4.4.0
+# Cython==3.0.10
+# distro==1.9.0
+# dtw-python==1.5.1
+# fsspec==2024.6.0
+# Jinja2==3.1.4
+# llvmlite==0.42.0
+# MarkupSafe==2.1.5
+# more-itertools==10.2.0
+# mpmath==1.3.0
+# networkx==3.3
+# numba==0.59.1
+# scipy==1.13.1
+# sympy==1.12.1
+# whisper==20231117

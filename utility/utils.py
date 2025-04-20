@@ -7,8 +7,8 @@ LOG_TYPE_GPT = "GPT"
 LOG_TYPE_PEXEL = "PEXEL"
 
 # log directory paths
-DIRECTORY_LOG_GPT = ".logs/gpt_logs"
-DIRECTORY_LOG_PEXEL = ".logs/pexel_logs"
+DIRECTORY_LOG_GPT = "exports/logs/gpt_logs"
+DIRECTORY_LOG_PEXEL = "exports/logs/pexel_logs"
 
 # method to log response from pexel and openai
 def log_response(log_type, query,response):

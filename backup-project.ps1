@@ -13,7 +13,7 @@ $backupDir = "D:\live\Documents\GitHub\_versions\$projectName - $date - $time"
 New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
 
 # Define what to exclude
-$excludedItems = @(".git", "exports", "node_modules", "venv", "__pycache__", "temp", "*.mp4", "*.mp3", "*.wav", "*.pyc")
+$excludedItems = @("exports", "node_modules", "venv", "__pycache__", "temp", "*.mp4", "*.mp3", "*.wav", "*.pyc")
 
 # Simple copy operation
 Get-ChildItem -Path $sourceDir -Recurse -Force | 

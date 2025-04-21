@@ -22,8 +22,6 @@ services:
     volumes:
       - ./exports:/app/exports                 # Contains logs directory
       - ./temp:/app/temp
-      # - ./.logs:/app/.logs                  # Comment out or remove this line
-      - ./utility:/app/utility     # Keep original working code
       - ./app:/app/app            # Add new structure
       - ./app.py:/app/app.py
       - ./streamlit_app.py:/app/streamlit_app.py
@@ -73,9 +71,10 @@ services:
     networks:
       - ttv-network
       - crown-network
+      
     command: streamlit run streamlit_app.py --server.port=7701 --server.address=0.0.0.0
-    # Keep original command (commented but preserved)
-    # command: streamlit run web/streamlit_app.py --server.port=7701 --server.address=0.0.0.0
+    # Comment out FastAPI command for now
+    # command: uvicorn app.main:app --host 0.0.0.0 --port 7701 --reload
 
 networks:
   ttv-network:

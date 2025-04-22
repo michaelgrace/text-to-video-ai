@@ -21,7 +21,6 @@ scripts/
 exports/
 temp/
 docs/
-app/
 config/
 .logs/
 

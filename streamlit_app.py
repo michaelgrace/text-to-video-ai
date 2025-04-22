@@ -109,6 +109,7 @@ if st.button("Generate Video"):
     else:
         st.session_state["theme_validation_msg"] = ""
     
+    # Use custom script if selected, otherwise use topic
     if selected_tab == "Custom Script":
         if not st.session_state["custom_script_input"].strip():
             st.session_state["validation_msg"] = "Please add your custom script."
@@ -116,6 +117,8 @@ if st.button("Generate Video"):
         else:
             st.session_state["validation_msg"] = ""
             input_text = st.session_state["custom_script_input"]
+            # Ensure both --theme and --custom-script are included
+            input_args = ["python", "app.py", input_text, "--theme", st.session_state["theme_input"], "--custom-script"]
     else:
         if not st.session_state["topic_input"].strip():
             st.session_state["validation_msg"] = "Please add your topic."
@@ -123,6 +126,7 @@ if st.button("Generate Video"):
         else:
             st.session_state["validation_msg"] = ""
             input_text = st.session_state["topic_input"]
+            input_args = ["python", "app.py", input_text, "--theme", st.session_state["theme_input"]]
 
     if not st.session_state["validation_msg"]:
         os.environ["VOICE_PROVIDER"] = voice_provider
@@ -131,8 +135,8 @@ if st.button("Generate Video"):
         
         with st.spinner("Generating your video... This might take a while."):
             try:
-                # Run the app.py script with the given input text
-                process = subprocess.Popen(["python", "app.py", input_text], 
+                # Use input_args to pass the flag if needed
+                process = subprocess.Popen(input_args, 
                                           stdout=subprocess.PIPE, 
                                           stderr=subprocess.PIPE,
                                           text=True)
@@ -150,15 +154,10 @@ if st.button("Generate Video"):
                 
                 # Check if process completed successfully
                 if process.returncode == 0:
-                    st.success("Video generated successfully!")
-                    
-                    # Check if the output file exists
                     output_file = Path("rendered_video.mp4")
                     if output_file.exists():
-                        # Display the video
+                        st.success("Video generated successfully!")
                         st.video(str(output_file))
-                        
-                        # Add download button
                         with open(output_file, "rb") as file:
                             st.download_button(
                                 label="Download Video",

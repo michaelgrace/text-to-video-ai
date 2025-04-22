@@ -16,15 +16,19 @@ from app.core.search_generator import getVideoSearchQueriesTimed, merge_empty_in
 import argparse
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Generate a video from a topic.")
-    parser.add_argument("topic", type=str, help="The topic for the video")
+    parser = argparse.ArgumentParser(description="Generate a video from a topic or custom script.")
+    parser.add_argument("input_text", type=str, help="The topic or custom script for the video")
+    parser.add_argument("--theme", type=str, required=True, help="Theme for the video")
+    parser.add_argument("--custom-script", action="store_true", help="Use input as custom script (bypass OpenAI)")
 
     args = parser.parse_args()
-    SAMPLE_TOPIC = args.topic
     SAMPLE_FILE_NAME = "audio_tts.wav"
     VIDEO_SERVER = "pexel"
 
-    response = generate_script(SAMPLE_TOPIC)
+    if args.custom_script:
+        response = args.input_text
+    else:
+        response = generate_script(args.theme, args.input_text)
     print("script: {}".format(response))
 
     asyncio.run(generate_audio(response, SAMPLE_FILE_NAME))
@@ -33,19 +37,27 @@ if __name__ == "__main__":
     print(timed_captions)
 
     search_terms = getVideoSearchQueriesTimed(response, timed_captions)
-    print(search_terms)
+    print("search_terms:", search_terms)
+    print("theme:", args.theme)
+    print("input_text:", args.input_text)
 
     background_video_urls = None
     if search_terms is not None:
-        background_video_urls = generate_video_url(search_terms, VIDEO_SERVER)
-        print(background_video_urls)
+        background_video_urls = generate_video_url(search_terms, VIDEO_SERVER, theme=args.theme)
+        print("background_video_urls:", background_video_urls)
     else:
         print("No background video")
-
-    background_video_urls = merge_empty_intervals(background_video_urls)
+        print("Failed search_terms:", search_terms)
+        print("Query context - theme:", args.theme, "input_text:", args.input_text)
 
     if background_video_urls is not None:
-        video = get_output_media(SAMPLE_FILE_NAME, timed_captions, background_video_urls, VIDEO_SERVER)
-        print(video)
+        background_video_urls_merged = merge_empty_intervals(background_video_urls)
+        if background_video_urls_merged is not None:
+            video = get_output_media(SAMPLE_FILE_NAME, timed_captions, background_video_urls_merged, VIDEO_SERVER)
+            print(video)
+        else:
+            print("merge_empty_intervals returned None. Failed background_video_urls:", background_video_urls)
+            print("Query context - theme:", args.theme, "input_text:", args.input_text, "search_terms:", search_terms)
     else:
-        print("No video")
+        print("background_video_urls is None. Failed search_terms:", search_terms)
+        print("Query context - theme:", args.theme, "input_text:", args.input_text)

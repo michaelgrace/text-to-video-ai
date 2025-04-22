@@ -1,0 +1,92 @@
+[
+    {
+        "name": "Microsoft Server Speech Text to Speech Voice (en-US, AriaNeural)",
+        "shortName": "en-US-AriaNeural",
+        "gender": "Female",
+        "locale": "en-US",
+        "voiceTag": {
+            "contentCategories": ["News", "Novel"],
+            "voicePersonalities": ["Positive", "Confident"]
+        }
+    },
+    {
+        "name": "Microsoft Server Speech Text to Speech Voice (en-US, AnaNeural)",
+        "shortName": "en-US-AnaNeural",
+        "gender": "Female",
+        "locale": "en-US",
+        "voiceTag": {
+            "contentCategories": ["Cartoon", "Conversation"],
+            "voicePersonalities": ["Cute"]
+        }
+    },
+    {
+        "name": "Microsoft Server Speech Text to Speech Voice (en-US, ChristopherNeural)",
+        "shortName": "en-US-ChristopherNeural",
+        "gender": "Male",
+        "locale": "en-US",
+        "voiceTag": {
+            "contentCategories": ["News", "Novel"],
+            "voicePersonalities": ["Reliable", "Authority"]
+        }
+    },
+    {
+        "name": "Microsoft Server Speech Text to Speech Voice (en-US, EricNeural)",
+        "shortName": "en-US-EricNeural",
+        "gender": "Male",
+        "locale": "en-US",
+        "voiceTag": {
+            "contentCategories": ["News", "Novel"],
+            "voicePersonalities": ["Rational"]
+        }
+    },
+    {
+        "name": "Microsoft Server Speech Text to Speech Voice (en-US, GuyNeural)",
+        "shortName": "en-US-GuyNeural",
+        "gender": "Male",
+        "locale": "en-US",
+        "voiceTag": {
+            "contentCategories": ["News", "Novel"],
+            "voicePersonalities": ["Passion"]
+        }
+    },
+    {
+        "name": "Microsoft Server Speech Text to Speech Voice (en-US, JennyNeural)",
+        "shortName": "en-US-JennyNeural",
+        "gender": "Female",
+        "locale": "en-US",
+        "voiceTag": {
+            "contentCategories": ["Conversation", "News"],
+            "voicePersonalities": ["Friendly", "Considerate", "Comfort"]
+        }
+    },
+    {
+        "name": "Microsoft Server Speech Text to Speech Voice (en-US, MichelleNeural)",
+        "shortName": "en-US-MichelleNeural",
+        "gender": "Female",
+        "locale": "en-US",
+        "voiceTag": {
+            "contentCategories": ["News", "Novel"],
+            "voicePersonalities": ["Friendly", "Pleasant"]
+        }
+    },
+    {
+        "name": "Microsoft Server Speech Text to Speech Voice (en-US, RogerNeural)",
+        "shortName": "en-US-RogerNeural",
+        "gender": "Male",
+        "locale": "en-US",
+        "voiceTag": {
+            "contentCategories": ["News", "Novel"],
+            "voicePersonalities": ["Lively"]
+        }
+    },
+    {
+        "name": "Microsoft Server Speech Text to Speech Voice (en-US, SteffanNeural)",
+        "shortName": "en-US-SteffanNeural",
+        "gender": "Male",
+        "locale": "en-US",
+        "voiceTag": {
+            "contentCategories": ["News", "Novel"],
+            "voicePersonalities": ["Rational"]
+        }
+    }
+]

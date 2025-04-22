@@ -22,14 +22,50 @@ with st.sidebar:
 st.title("Text-To-Video AI 🔥")
 st.write("Generate video from text using AI")
 
-# Input field for topic
-topic = st.text_input("Topic for Video", value="Interesting Facts About Space")
+tab_labels = ["Custom Script", "Topic"]
+# Track previous tab to detect tab switch
+if "prev_tab" not in st.session_state:
+    st.session_state["prev_tab"] = tab_labels[0]
+selected_tab = st.radio("Select Input Mode", tab_labels, horizontal=True, key="tab_select")
+
+if "validation_msg" not in st.session_state:
+    st.session_state["validation_msg"] = ""
+
+# Clear validation message when switching tabs
+if selected_tab != st.session_state["prev_tab"]:
+    st.session_state["validation_msg"] = ""
+st.session_state["prev_tab"] = selected_tab
+
+if selected_tab == "Custom Script":
+    custom_script = st.text_area("Enter your custom script", value="", key="custom_script_input")
+    if st.session_state["validation_msg"]:
+        st.warning(st.session_state["validation_msg"])
+    # Clear validation if text is added
+    if custom_script.strip() and st.session_state["validation_msg"]:
+        st.session_state["validation_msg"] = ""
+elif selected_tab == "Topic":
+    topic = st.text_input("Topic for Video", value="Interesting Facts About Space", key="topic_input")
+    if st.session_state["validation_msg"]:
+        st.warning(st.session_state["validation_msg"])
+    # Clear validation if text is added
+    if topic.strip() and st.session_state["validation_msg"]:
+        st.session_state["validation_msg"] = ""
 
 # Load voice options from schema
 schema_path = Path(__file__).parent / "app" / "schemas" / "kokoro_voices.json"
 with open(schema_path) as f:
     voice_data = json.load(f)
     available_voices = voice_data["voices"]
+
+# Theme input above voice provider
+theme = st.text_input("Theme", value="Add video theme", key="theme_input")
+if "theme_validation_msg" not in st.session_state:
+    st.session_state["theme_validation_msg"] = ""
+if not theme.strip():
+    st.session_state["theme_validation_msg"] = "Theme cannot be blank."
+    st.warning(st.session_state["theme_validation_msg"])
+elif st.session_state["theme_validation_msg"]:
+    st.session_state["theme_validation_msg"] = ""
 
 # Voice control settings
 voice_provider = st.selectbox(
@@ -65,62 +101,85 @@ speech_rate = st.number_input(
 
 # Process button
 if st.button("Generate Video"):
-    # Remove API key checks since they're handled by environment
-    os.environ["VOICE_PROVIDER"] = voice_provider
-    os.environ["VOICE_ID"] = voice_id
-    os.environ["SPEECH_RATE"] = str(speech_rate)
+    # Prevent running if theme is blank
+    if not st.session_state["theme_input"].strip():
+        st.session_state["theme_validation_msg"] = "Theme cannot be blank."
+        st.warning(st.session_state["theme_validation_msg"])
+        st.stop()
+    else:
+        st.session_state["theme_validation_msg"] = ""
     
-    with st.spinner("Generating your video... This might take a while."):
-        try:
-            # Run the app.py script with the given topic
-            process = subprocess.Popen(["python", "app.py", topic], 
-                                      stdout=subprocess.PIPE, 
-                                      stderr=subprocess.PIPE,
-                                      text=True)
-            
-            # Create a placeholder for the output
-            output_placeholder = st.empty()
-            
-            # Show output in real-time
-            while True:
-                output = process.stdout.readline()
-                if output == '' and process.poll() is not None:
-                    break
-                if output:
-                    output_placeholder.text(output.strip())
-            
-            # Check if process completed successfully
-            if process.returncode == 0:
-                st.success("Video generated successfully!")
+    if selected_tab == "Custom Script":
+        if not st.session_state["custom_script_input"].strip():
+            st.session_state["validation_msg"] = "Please add your custom script."
+            st.experimental_rerun()
+        else:
+            st.session_state["validation_msg"] = ""
+            input_text = st.session_state["custom_script_input"]
+    else:
+        if not st.session_state["topic_input"].strip():
+            st.session_state["validation_msg"] = "Please add your topic."
+            st.experimental_rerun()
+        else:
+            st.session_state["validation_msg"] = ""
+            input_text = st.session_state["topic_input"]
+
+    if not st.session_state["validation_msg"]:
+        os.environ["VOICE_PROVIDER"] = voice_provider
+        os.environ["VOICE_ID"] = voice_id
+        os.environ["SPEECH_RATE"] = str(speech_rate)
+        
+        with st.spinner("Generating your video... This might take a while."):
+            try:
+                # Run the app.py script with the given input text
+                process = subprocess.Popen(["python", "app.py", input_text], 
+                                          stdout=subprocess.PIPE, 
+                                          stderr=subprocess.PIPE,
+                                          text=True)
                 
-                # Check if the output file exists
-                output_file = Path("rendered_video.mp4")
-                if output_file.exists():
-                    # Display the video
-                    st.video(str(output_file))
+                # Create a placeholder for the output
+                output_placeholder = st.empty()
+                
+                # Show output in real-time
+                while True:
+                    output = process.stdout.readline()
+                    if output == '' and process.poll() is not None:
+                        break
+                    if output:
+                        output_placeholder.text(output.strip())
+                
+                # Check if process completed successfully
+                if process.returncode == 0:
+                    st.success("Video generated successfully!")
                     
-                    # Add download button
-                    with open(output_file, "rb") as file:
-                        st.download_button(
-                            label="Download Video",
-                            data=file,
-                            file_name="rendered_video.mp4",
-                            mime="video/mp4"
-                        )
+                    # Check if the output file exists
+                    output_file = Path("rendered_video.mp4")
+                    if output_file.exists():
+                        # Display the video
+                        st.video(str(output_file))
+                        
+                        # Add download button
+                        with open(output_file, "rb") as file:
+                            st.download_button(
+                                label="Download Video",
+                                data=file,
+                                file_name="rendered_video.mp4",
+                                mime="video/mp4"
+                            )
+                    else:
+                        st.error("Video file not found. Check the console output for details.")
                 else:
-                    st.error("Video file not found. Check the console output for details.")
-            else:
-                error = process.stderr.read()
-                st.error(f"Error generating video: {error}")
-                
-        except Exception as e:
-            st.error(f"An error occurred: {str(e)}")
+                    error = process.stderr.read()
+                    st.error(f"Error generating video: {error}")
+                    
+            except Exception as e:
+                st.error(f"An error occurred: {str(e)}")
 
 st.write("---")
 st.write("### How it works")
 st.write("""
 1. Enter your OpenAI and Pexels API keys
-2. Type in a topic for your video
+2. Type in a topic for your video or enter a custom script
 3. Click 'Generate Video' and wait for the process to complete
 4. The generated video will appear below for viewing and download
 """)

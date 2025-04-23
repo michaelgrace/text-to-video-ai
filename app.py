@@ -19,11 +19,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate a video from a topic or custom script.")
     parser.add_argument("input_text", type=str, help="The topic or custom script for the video")
     parser.add_argument("--theme", type=str, required=True, help="Theme for the video")
+    parser.add_argument("--aspect-ratio", type=str, default="landscape", choices=["landscape", "portrait", "square"], help="Aspect ratio for the video")
+    parser.add_argument("--title", type=str, required=True, help="Title (video name)")
     parser.add_argument("--custom-script", action="store_true", help="Use input as custom script (bypass OpenAI)")
 
     args = parser.parse_args()
     SAMPLE_FILE_NAME = "audio_tts.wav"
     VIDEO_SERVER = "pexel"
+
+    print("video_title:", args.title)
 
     if args.custom_script:
         response = args.input_text
@@ -43,7 +47,14 @@ if __name__ == "__main__":
 
     background_video_urls = None
     if search_terms is not None:
-        background_video_urls = generate_video_url(search_terms, VIDEO_SERVER, theme=args.theme)
+        background_video_urls = generate_video_url(
+            search_terms,
+            VIDEO_SERVER,
+            theme=args.theme,
+            aspect_ratio=args.aspect_ratio,
+            video_name=args.title,
+            topic=args.input_text
+        )
         print("background_video_urls:", background_video_urls)
     else:
         print("No background video")

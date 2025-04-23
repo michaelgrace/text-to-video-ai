@@ -26,6 +26,7 @@ Pillow==10.3.0
 proglog==0.1.10  # Required by moviepy
 pydantic==2.7.3  # Will be needed for FastAPI
 pydantic_core==2.18.4  # Required by pydantic
+psycopg2-binary
 python-dotenv==1.0.0
 regex==2024.5.15  # Required for text processing
 requests==2.32.3

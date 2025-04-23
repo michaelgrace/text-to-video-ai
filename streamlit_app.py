@@ -38,16 +38,20 @@ st.session_state["prev_tab"] = selected_tab
 
 if selected_tab == "Custom Script":
     custom_script = st.text_area("Enter your custom script", value="", key="custom_script_input")
+    # Title is required for custom script
+    title = st.text_input("Title (required)", value="", key="video_title_input")
     if st.session_state["validation_msg"]:
         st.warning(st.session_state["validation_msg"])
-    # Clear validation if text is added
     if custom_script.strip() and st.session_state["validation_msg"]:
         st.session_state["validation_msg"] = ""
 elif selected_tab == "Topic":
     topic = st.text_input("Topic for Video", value="Interesting Facts About Space", key="topic_input")
+    # Title defaults to topic, but can be edited
+    if "video_title_input" not in st.session_state or not st.session_state["video_title_input"]:
+        st.session_state["video_title_input"] = st.session_state["topic_input"]
+    title = st.text_input("Title (required)", value=st.session_state["video_title_input"], key="video_title_input")
     if st.session_state["validation_msg"]:
         st.warning(st.session_state["validation_msg"])
-    # Clear validation if text is added
     if topic.strip() and st.session_state["validation_msg"]:
         st.session_state["validation_msg"] = ""
 
@@ -66,6 +70,14 @@ if not theme.strip():
     st.warning(st.session_state["theme_validation_msg"])
 elif st.session_state["theme_validation_msg"]:
     st.session_state["theme_validation_msg"] = ""
+
+# Aspect ratio select box
+aspect_ratio = st.selectbox(
+    "Aspect Ratio",
+    options=["landscape", "portrait", "square"],
+    index=0,
+    key="aspect_ratio"
+)
 
 # Voice control settings
 voice_provider = st.selectbox(
@@ -109,6 +121,12 @@ if st.button("Generate Video"):
     else:
         st.session_state["theme_validation_msg"] = ""
     
+    # Validate title
+    if not st.session_state["video_title_input"].strip():
+        st.session_state["validation_msg"] = "Title is required."
+        st.warning(st.session_state["validation_msg"])
+        st.stop()
+    
     # Use custom script if selected, otherwise use topic
     if selected_tab == "Custom Script":
         if not st.session_state["custom_script_input"].strip():
@@ -118,7 +136,13 @@ if st.button("Generate Video"):
             st.session_state["validation_msg"] = ""
             input_text = st.session_state["custom_script_input"]
             # Ensure both --theme and --custom-script are included
-            input_args = ["python", "app.py", input_text, "--theme", st.session_state["theme_input"], "--custom-script"]
+            input_args = [
+                "python", "app.py", input_text,
+                "--theme", st.session_state["theme_input"],
+                "--aspect-ratio", st.session_state["aspect_ratio"],
+                "--title", st.session_state["video_title_input"],
+                "--custom-script"
+            ]
     else:
         if not st.session_state["topic_input"].strip():
             st.session_state["validation_msg"] = "Please add your topic."
@@ -126,7 +150,12 @@ if st.button("Generate Video"):
         else:
             st.session_state["validation_msg"] = ""
             input_text = st.session_state["topic_input"]
-            input_args = ["python", "app.py", input_text, "--theme", st.session_state["theme_input"]]
+            input_args = [
+                "python", "app.py", input_text,
+                "--theme", st.session_state["theme_input"],
+                "--aspect-ratio", st.session_state["aspect_ratio"],
+                "--title", st.session_state["video_title_input"]
+            ]
 
     if not st.session_state["validation_msg"]:
         os.environ["VOICE_PROVIDER"] = voice_provider

@@ -1,5 +1,9 @@
 import os
 import sys
+import json
+import tempfile
+import mimetypes
+from urllib.parse import urlparse
 
 # Add the project directory to the path to ensure imports work correctly
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -8,15 +12,15 @@ import sys
 # from utility.render.moviepy_config import *
 
 import time
-import tempfile
 import zipfile
 import platform
 import subprocess
 from moviepy.editor import (AudioFileClip, CompositeVideoClip, CompositeAudioClip, ImageClip,
-                            TextClip, VideoFileClip)
+                            TextClip, VideoFileClip, ColorClip)
 from moviepy.audio.fx.audio_loop import audio_loop
 from moviepy.audio.fx.audio_normalize import audio_normalize
 import requests
+from PIL import Image
 
 def download_file(url, filename):
     with open(filename, 'wb') as f:
@@ -25,6 +29,13 @@ def download_file(url, filename):
         }
         response = requests.get(url, headers=headers)
         f.write(response.content)
+
+def get_extension_from_url(url):
+    path = urlparse(url).path
+    ext = os.path.splitext(path)[1]
+    if ext and ext.lower() in [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"]:
+        return ext
+    return ".jpg"  # Default fallback
 
 def search_program(program_name):
     try: 
@@ -36,6 +47,63 @@ def search_program(program_name):
 def get_program_path(program_name):
     program_path = search_program(program_name)
     return program_path
+
+def is_image_file(filename):
+    # Simple check by extension
+    return filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp'))
+
+def pad_image_to_even(filename):
+    """Pad image to even width and height if needed, overwrite the file."""
+    img = Image.open(filename)
+    w, h = img.size
+    new_w = w + (w % 2)
+    new_h = h + (h % 2)
+    if (w, h) != (new_w, new_h):
+        # Pad the image with black (or white if you prefer)
+        new_img = Image.new(img.mode, (new_w, new_h), color=0)
+        new_img.paste(img, (0, 0))
+        new_img.save(filename)
+        img.close()
+        new_img.close()
+    else:
+        img.close()
+
+def resize_and_pad_image(filename, target_width=1920, target_height=1080):
+    """Resize and pad image to fit exactly target_width x target_height."""
+    img = Image.open(filename)
+    # Calculate new size preserving aspect ratio
+    img_ratio = img.width / img.height
+    target_ratio = target_width / target_height
+
+    if img_ratio > target_ratio:
+        # Image is wider than target: fit width, pad height
+        new_width = target_width
+        new_height = int(target_width / img_ratio)
+    else:
+        # Image is taller than target: fit height, pad width
+        new_height = target_height
+        new_width = int(target_height * img_ratio)
+
+    img_resized = img.resize((new_width, new_height), Image.LANCZOS)
+    # Create black background and paste resized image centered
+    new_img = Image.new("RGB", (target_width, target_height), color=0)
+    paste_x = (target_width - new_width) // 2
+    paste_y = (target_height - new_height) // 2
+    new_img.paste(img_resized, (paste_x, paste_y))
+    new_img.save(filename)
+    img.close()
+    img_resized.close()
+    new_img.close()
+
+def load_caption_settings():
+    config_path = os.path.join(os.path.dirname(__file__), "../config/global_settings.json")
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+            return config.get("captions", {})
+    except Exception as e:
+        print(f"Could not load caption settings: {e}")
+        return {}
 
 def get_output_media(audio_file_path, timed_captions, background_video_data, video_server, preset='ultrafast'):
     print("Rendering video...")
@@ -56,16 +124,53 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
             os.environ['IMAGEMAGICK_BINARY'] = '/usr/bin/convert'
         
         visual_clips = []
-        for (t1, t2), video_url in background_video_data:
-            # Download the video file
-            video_filename = tempfile.NamedTemporaryFile(delete=False).name
-            download_file(video_url, video_filename)
-            
-            # Create VideoFileClip from the downloaded file
-            video_clip = VideoFileClip(video_filename)
-            video_clip = video_clip.set_start(t1)
-            video_clip = video_clip.set_end(t2)
-            visual_clips.append(video_clip)
+        for idx, entry in enumerate(background_video_data):
+            # Support both [interval, url] and [interval, url, is_photo]
+            if len(entry) == 3:
+                (t1, t2), media_url, is_photo = entry
+            else:
+                (t1, t2), media_url = entry
+                is_photo = False  # Default to video if not specified
+
+            if media_url is None:
+                print(f"NO MEDIA URL for segment {t1}-{t2}, using black background.")
+                # Insert black background for this segment
+                # Default size: 1920x1080, adjust as needed for portrait/square
+                width, height = 1920, 1080
+                if video_server == "pexel":
+                    # Optionally, infer from aspect ratio or other settings
+                    pass
+                black_clip = ColorClip(size=(width, height), color=(0, 0, 0)).set_duration(t2 - t1)
+                black_clip = black_clip.set_start(t1)
+                black_clip = black_clip.set_end(t2)
+                visual_clips.append(black_clip)
+                print(f"Inserted black background for segment {t1}-{t2}")
+                continue
+
+            print(f"Attempting to download and process image: {media_url}")
+            # Use correct file extension for image files
+            ext = get_extension_from_url(media_url) if (is_photo or media_url.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp'))) else ""
+            media_filename = tempfile.NamedTemporaryFile(delete=False, suffix=ext).name
+            download_file(media_url, media_filename)
+            try:
+                if is_photo or media_url.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp')):
+                    print(f"Processing image for segment {t1}-{t2}: {media_url}")
+                    resize_and_pad_image(media_filename, 1920, 1080)
+                    image_clip = ImageClip(media_filename).set_duration(t2 - t1)
+                    image_clip = image_clip.set_start(t1)
+                    image_clip = image_clip.set_end(t2)
+                    visual_clips.append(image_clip)
+                    print(f"Used image fallback for segment {t1}-{t2}: {media_url}")
+                else:
+                    # Handle as video
+                    video_clip = VideoFileClip(media_filename)
+                    video_clip = video_clip.set_start(t1)
+                    video_clip = video_clip.set_end(t2)
+                    visual_clips.append(video_clip)
+            except Exception as exc:
+                print(f"Failed to open media for segment {t1}-{t2}: {media_url}")
+                print(f"Error: {exc}")
+                continue
         
         audio_clips = []
         audio_file_clip = AudioFileClip(audio_file_path)
@@ -81,12 +186,44 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
                 visual_clips[-1] = last_clip
         # ---------------------------------------------------------------
 
-        # TODO: UI for font control
+        caption_settings = load_caption_settings()
+        font = caption_settings.get("font", "Arial-Bold")
+        fontsize = caption_settings.get("fontsize", 80)
+        fontcolor = caption_settings.get("fontcolor", "yellow")
+        stroke_color = caption_settings.get("stroke_color", "black")
+        stroke_width = caption_settings.get("stroke_width", 3)
+        caption_position = caption_settings.get("caption_position", ["center", "bottom"])
+        caption_margin = caption_settings.get("caption_margin", 80)
+
+        # After visual_clips are created, get video height for caption positioning
+        video_height = 1080  # Default fallback
+        if visual_clips:
+            try:
+                video_height = visual_clips[0].h
+            except Exception:
+                pass
+
         for (t1, t2), text in timed_captions:
-            text_clip = TextClip(txt=text, fontsize=130, color="yellow", stroke_width=3, stroke_color="black", method="label")
+            text_clip = TextClip(
+                txt=text,
+                fontsize=fontsize,
+                color=fontcolor,
+                font=font,
+                stroke_width=stroke_width,
+                stroke_color=stroke_color,
+                method="label"
+            )
+            # Position logic
+            if caption_position == ["center", "center"]:
+                text_clip = text_clip.set_position("center")
+            elif caption_position == ["center", "bottom"]:
+                # Place at bottom with margin using lambda for dynamic positioning
+                text_clip = text_clip.set_position(lambda txt: ("center", video_height - text_clip.h - caption_margin))
+            else:
+                # Fallback to center
+                text_clip = text_clip.set_position("center")
             text_clip = text_clip.set_start(t1)
             text_clip = text_clip.set_end(t2)
-            text_clip = text_clip.set_position(["center", 800])
             visual_clips.append(text_clip)
 
         video = CompositeVideoClip(visual_clips)
@@ -115,9 +252,9 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
         )
         
         # Clean up downloaded files
-        for (t1, t2), video_url in background_video_data:
-            video_filename = tempfile.NamedTemporaryFile(delete=False).name
-            os.remove(video_filename)
+        for (t1, t2), media_url in background_video_data:
+            media_filename = tempfile.NamedTemporaryFile(delete=False).name
+            os.remove(media_filename)
 
         return OUTPUT_FILE_NAME
     except Exception as e:

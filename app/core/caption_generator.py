@@ -50,7 +50,7 @@ def interpolateTimeFromDict(word_position, d):
             return value
     return None
 
-def getCaptionsWithTime(whisper_analysis, maxCaptionSize=50, considerPunctuation=False):
+def getCaptionsWithTime(whisper_analysis, maxCaptionSize=40, considerPunctuation=False):
    
     print("Processing captions with time...")
     wordLocationToTime = getTimestampMapping(whisper_analysis)
@@ -74,3 +74,26 @@ def getCaptionsWithTime(whisper_analysis, maxCaptionSize=50, considerPunctuation
             start_time = end_time
 
     return CaptionsPairs
+
+def merge_captions_by_duration(captions, min_segment_duration=5, max_segment_duration=10):
+    """
+    Merge adjacent captions so each segment is at least min_segment_duration
+    and at most max_segment_duration seconds.
+    """
+    merged = []
+    i = 0
+    while i < len(captions):
+        start, _ = captions[i][0]
+        texts = [captions[i][1]]
+        end = captions[i][0][1]
+        j = i + 1
+        # Merge until min_segment_duration is reached or max_segment_duration is exceeded
+        while (end - start) < min_segment_duration and j < len(captions):
+            end = captions[j][0][1]
+            texts.append(captions[j][1])
+            j += 1
+            if (end - start) >= max_segment_duration:
+                break
+        merged.append(((start, end), " ".join(texts)))
+        i = j
+    return merged

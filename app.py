@@ -9,7 +9,7 @@ from app.services.kokoro_service import kokoro_client
 from app.services.openai_service import generate_script
 from app.core.audio_generator import generate_audio
 from app.core.caption_generator import generate_timed_captions
-from app.services.pexels_service import generate_video_url
+from app.services.pexels_diversity import generate_video_url_diverse
 from app.core.render import get_output_media
 from app.core.search_generator import getVideoSearchQueriesTimed, merge_empty_intervals
 
@@ -22,6 +22,7 @@ if __name__ == "__main__":
     parser.add_argument("--aspect-ratio", type=str, default="landscape", choices=["landscape", "portrait", "square"], help="Aspect ratio for the video")
     parser.add_argument("--title", type=str, required=True, help="Title (video name)")
     parser.add_argument("--custom-script", action="store_true", help="Use input as custom script (bypass OpenAI)")
+    parser.add_argument("--render-mode", type=str, default="video", choices=["video", "photo", "hybrid (both)"], help="Rendering mode: video, photo, or hybrid (both)")
 
     args = parser.parse_args()
     SAMPLE_FILE_NAME = "audio_tts.wav"
@@ -53,13 +54,14 @@ if __name__ == "__main__":
     background_video_urls = None
     if search_terms is not None:
         print("Generating background video URLs...")
-        background_video_urls = generate_video_url(
+        background_video_urls = generate_video_url_diverse(
             search_terms,
             VIDEO_SERVER,
             theme=args.theme,
             aspect_ratio=args.aspect_ratio,
             video_name=args.title,
-            topic=args.input_text
+            topic=args.input_text,
+            render_mode=args.render_mode  # <-- pass render mode
         )
         print("background_video_urls:", json.dumps(background_video_urls))  # Print as JSON
     else:
@@ -68,8 +70,12 @@ if __name__ == "__main__":
         print("Query context - theme:", args.theme, "input_text:", args.input_text)
 
     if background_video_urls is not None:
+        # Only keep [interval, url] for merge_empty_intervals
+        background_video_urls_for_merge = [
+            [interval, url] for interval, url, _ in background_video_urls
+        ]
         print("Merging empty intervals in background video URLs...")
-        background_video_urls_merged = merge_empty_intervals(background_video_urls)
+        background_video_urls_merged = merge_empty_intervals(background_video_urls_for_merge)
         if background_video_urls_merged is not None:
             print("Rendering video...")
             video = get_output_media(SAMPLE_FILE_NAME, timed_captions, background_video_urls_merged, VIDEO_SERVER)

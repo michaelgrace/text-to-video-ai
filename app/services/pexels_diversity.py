@@ -1,3 +1,8 @@
+# NOTE: Run this once in your environment to download the tokenizer data:
+# import nltk; nltk.download('punkt')
+
+import re
+from nltk.stem import PorterStemmer
 from app.services.pexels_service import search_videos, contains_negative_keyword
 from app.services.pexels_photo_service import search_photos, select_best_photo
 from app.utils.helpers import log_response, LOG_TYPE_PEXEL
@@ -10,7 +15,8 @@ def getBestVideoDiverse(
     theme=None,
     topic=None,
     aspect_ratio=None,
-    relax_filters=False
+    relax_filters=False,
+    relax_negative_keywords=False
 ):
     if used_video_ids is None:
         used_video_ids = set()
@@ -31,7 +37,14 @@ def getBestVideoDiverse(
     )
     videos = vids.get('videos', [])
 
-    # Negative keyword filter
+    # --- Fuzzy/Plural Matching: Use stemming for keywords and metadata ---
+    stemmer = PorterStemmer()
+    query_keywords = set(stemmer.stem(word.lower()) for word in re.findall(r'\w+', query_string))
+    if theme:
+        query_keywords.update(stemmer.stem(word.lower()) for word in re.findall(r'\w+', theme))
+    if topic:
+        query_keywords.update(stemmer.stem(word.lower()) for word in re.findall(r'\w+', topic))
+
     filtered_videos = []
     for video in videos:
         meta_fields = [
@@ -40,7 +53,11 @@ def getBestVideoDiverse(
             str(video.get('user', {}).get('name', '')).lower(),
             " ".join([str(tag).lower() for tag in video.get('tags', [])]),
         ]
-        if any(contains_negative_keyword(field) for field in meta_fields):
+        # Stem all words in metadata
+        meta_words = set(stemmer.stem(word) for field in meta_fields for word in re.findall(r'\w+', field))
+        if not query_keywords.intersection(meta_words):
+            continue  # Skip if no fuzzy/plural keyword present
+        if not relax_negative_keywords and any(contains_negative_keyword(field) for field in meta_fields):
             continue
         filtered_videos.append(video)
 
@@ -99,7 +116,7 @@ def getBestVideoDiverse(
                         used_video_ids.add(video['id'])
                         return video_file['link'], video['id'], False
 
-    # If no unique video found and not already relaxed, try relaxing filters
+    # If no unique video found, try relaxing filters (resolution, aspect ratio)
     if not relax_filters:
         return getBestVideoDiverse(
             query_string,
@@ -109,10 +126,25 @@ def getBestVideoDiverse(
             theme=theme,
             topic=topic,
             aspect_ratio=aspect_ratio,
-            relax_filters=True
+            relax_filters=True,
+            relax_negative_keywords=relax_negative_keywords
         )
 
-    # Fallback: Try to get a photo
+    # If still no video, try relaxing negative keywords filter
+    if not relax_negative_keywords:
+        return getBestVideoDiverse(
+            query_string,
+            orientation_landscape,
+            used_video_ids=used_video_ids,
+            video_name=video_name,
+            theme=theme,
+            topic=topic,
+            aspect_ratio=aspect_ratio,
+            relax_filters=True,
+            relax_negative_keywords=True
+        )
+
+    # Fallback: Try to get a photo (with relaxed filters)
     photo_url = select_best_photo(query_string, orientation_landscape, theme=theme, aspect_ratio=aspect_ratio)
     if photo_url:
         log_response(
@@ -127,8 +159,19 @@ def getBestVideoDiverse(
         )
         return photo_url, None, True
 
-    print("NO VIDEO or PHOTO found for this round of search with query :", query_string)
-    return None, None, False
+    # If still nothing, log and return the failed query string
+    print(f"NO VIDEO or PHOTO found for this search query: '{search_query}'")
+    log_response(
+        LOG_TYPE_PEXEL,
+        query_string,
+        {
+            "error": "No relevant video or photo found",
+            "failed_query": search_query,
+            "theme": theme,
+            "topic": topic
+        }
+    )
+    return None, None, search_query
 
 def select_best_photo(query_string, orientation_landscape=True, theme=None, aspect_ratio="landscape"):
     # Always combine theme and query_string for more relevant search
@@ -161,29 +204,72 @@ def select_best_photo(query_string, orientation_landscape=True, theme=None, aspe
         return sorted_photos[0]['src']['original']
     return None
 
-def generate_video_url_diverse(timed_video_searches, video_server, theme=None, aspect_ratio="landscape", video_name=None, topic=None):
+def generate_video_url_diverse(
+    timed_video_searches,
+    video_server,
+    theme=None,
+    aspect_ratio="landscape",
+    video_name=None,
+    topic=None,
+    render_mode="video"  # <-- new parameter
+):
     timed_video_urls = []
     used_video_ids = set()
     if video_server == "pexel":
         for (t1, t2), search_terms in timed_video_searches:
             url = None
             is_photo = False
+            failed_query = None
             for query in search_terms:
-                video_url, video_id, fallback_photo = getBestVideoDiverse(
-                    query,
-                    orientation_landscape=(aspect_ratio == "landscape"),
-                    used_video_ids=used_video_ids,
-                    video_name=video_name,
-                    theme=theme,
-                    topic=topic,
-                    aspect_ratio=aspect_ratio
-                )
-                if video_url:
-                    if not fallback_photo and video_id:
+                if render_mode == "video":
+                    # Only allow video, no photo fallback
+                    video_url, video_id, fallback = getBestVideoDiverse(
+                        query,
+                        orientation_landscape=(aspect_ratio == "landscape"),
+                        used_video_ids=used_video_ids,
+                        video_name=video_name,
+                        theme=theme,
+                        topic=topic,
+                        aspect_ratio=aspect_ratio
+                    )
+                    if video_url and video_id:
                         used_video_ids.add(video_id)
-                    url = video_url
-                    is_photo = fallback_photo
-                    break
-            timed_video_urls.append([[t1, t2], url, is_photo])
+                        url = video_url
+                        is_photo = False
+                        break
+                elif render_mode == "photo":
+                    # Only allow photo, never video
+                    photo_url = select_best_photo(
+                        query,
+                        orientation_landscape=(aspect_ratio == "landscape"),
+                        theme=theme,
+                        aspect_ratio=aspect_ratio
+                    )
+                    if photo_url:
+                        url = photo_url
+                        is_photo = True
+                        break
+                else:
+                    # hybrid (both) - keep existing logic
+                    video_url, video_id, fallback = getBestVideoDiverse(
+                        query,
+                        orientation_landscape=(aspect_ratio == "landscape"),
+                        used_video_ids=used_video_ids,
+                        video_name=video_name,
+                        theme=theme,
+                        topic=topic,
+                        aspect_ratio=aspect_ratio
+                    )
+                    if video_url:
+                        if not fallback and video_id:
+                            used_video_ids.add(video_id)
+                        url = video_url
+                        is_photo = (video_id is None and video_url is not None)
+                        break
+                    elif fallback and isinstance(fallback, str):
+                        failed_query = fallback
+            if not url and failed_query:
+                print(f"Failed to find relevant video or photo for query: '{failed_query}'")
+            timed_video_urls.append([[t1, t2], url, is_photo if url else failed_query])
     # ...add stable_diffusion logic if needed...
     return timed_video_urls

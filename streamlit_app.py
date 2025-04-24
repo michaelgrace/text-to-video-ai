@@ -3,6 +3,8 @@ import subprocess
 import os
 import time
 import json
+import re
+import ast
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import datetime
@@ -85,6 +87,14 @@ aspect_ratio = st.selectbox(
     key="aspect_ratio"
 )
 
+# Rendering mode select box
+render_mode = st.selectbox(
+    "Rendering Mode",
+    options=["video", "photo", "hybrid (both)"],
+    index=0,
+    key="render_mode"
+)
+
 # Voice control settings
 voice_provider = st.selectbox(
     "Voice Provider",
@@ -137,11 +147,77 @@ def save_log(log_data, title):
     return log_path
 
 def pretty_json_or_text(line):
+    # --- Pretty-print JSON ---
     try:
         obj = json.loads(line)
         return json.dumps(obj, indent=2)
     except Exception:
-        return line
+        pass
+    # --- Pretty-print timed_captions: lines vertically ---
+    if line.strip().startswith("timed_captions:"):
+        match = re.search(r'timed_captions:\s*(\[.*\])', line)
+        if match:
+            captions_str = match.group(1)
+            try:
+                captions = ast.literal_eval(captions_str)
+                pretty_lines = []
+                for segment in captions:
+                    time_range, text = segment
+                    pretty_lines.append(f"  {time_range}: {text}")
+                return "timed_captions:\n" + "\n".join(pretty_lines)
+            except Exception:
+                return line
+    # --- Pretty-print Timed Captions:((...))((...)) lines vertically ---
+    if line.strip().startswith("Timed Captions:"):
+        matches = re.findall(r'\(\(([^,]+), ([^\)]+)\), [\'"](.+?)[\'"]\)', line)
+        if matches:
+            pretty_lines = []
+            for start, end, text in matches:
+                pretty_lines.append(f"  [{start}, {end}]: {text}")
+            return "Timed Captions:\n" + "\n".join(pretty_lines)
+    # --- Pretty-print Text ```json [ ... ] ``` lines vertically ---
+    # Handles both: Text ```json [ ... ] ``` and  ```json [ ... ] ```
+    match = re.search(r'```json\s*(\[.*\])\s*```', line)
+    if match:
+        try:
+            arr = ast.literal_eval(match.group(1))
+            pretty_lines = []
+            for segment in arr:
+                if isinstance(segment, list) and len(segment) == 2:
+                    time_range, keywords = segment
+                    pretty_lines.append(f"  {time_range}: {keywords}")
+            return "Text JSON:\n" + "\n".join(pretty_lines)
+        except Exception:
+            return line
+    # Handles: Text ```json [ ... ] ``` inline (no newlines)
+    match2 = re.search(r'Text ```json\s*(\[.*\])\s*```', line)
+    if match2:
+        try:
+            arr = ast.literal_eval(match2.group(1))
+            pretty_lines = []
+            for segment in arr:
+                if isinstance(segment, list) and len(segment) == 2:
+                    time_range, keywords = segment
+                    pretty_lines.append(f"  {time_range}: {keywords}")
+            return "Text JSON:\n" + "\n".join(pretty_lines)
+        except Exception:
+            return line
+    # --- Pretty-print background_video_urls: lines vertically ---
+    if line.strip().startswith("background_video_urls:"):
+        match = re.search(r'background_video_urls:\s*(\[.*\])', line)
+        if match:
+            urls_str = match.group(1)
+            try:
+                arr = ast.literal_eval(urls_str)
+                pretty_lines = []
+                for segment in arr:
+                    if isinstance(segment, list) and len(segment == 2):
+                        time_range, url = segment
+                        pretty_lines.append(f"  {time_range}: {url}")
+                return "background_video_urls:\n" + "\n".join(pretty_lines)
+            except Exception:
+                return line
+    return line
 
 # --- Video output placeholder ---
 video_placeholder = st.empty()
@@ -217,7 +293,8 @@ if st.button("Generate Video"):
                 "--theme", st.session_state["theme_input"],
                 "--aspect-ratio", st.session_state["aspect_ratio"],
                 "--title", st.session_state["video_title_input"],
-                "--custom-script"
+                "--custom-script",
+                "--render-mode", render_mode  # <-- pass render mode
             ]
     else:
         if not st.session_state["topic_input"].strip():
@@ -230,7 +307,8 @@ if st.button("Generate Video"):
                 "python", "app.py", input_text,
                 "--theme", st.session_state["theme_input"],
                 "--aspect-ratio", st.session_state["aspect_ratio"],
-                "--title", st.session_state["video_title_input"]
+                "--title", st.session_state["video_title_input"],
+                "--render-mode", render_mode  # <-- pass render mode
             ]
 
     # Clear log window and metadata for new run

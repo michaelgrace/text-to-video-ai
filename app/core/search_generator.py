@@ -39,6 +39,9 @@ def fix_json(json_str):
     json_str = json_str.replace("“", "\"").replace("”", "\"").replace("‘", "\"").replace("’", "\"")
     # Add escaping for quotes within the strings
     json_str = json_str.replace('"you didn"t"', '"you didn\'t"')
+    # Fix OpenAI's common quote bug: replace "word"s with "word's"
+    json_str = re.sub(r'"([A-Za-z]+)"s', r'"\1\'s', json_str)
+    # Optionally, fix other common issues
     return json_str
 
 def getVideoSearchQueriesTimed(script,captions_timed):

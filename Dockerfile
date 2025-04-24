@@ -36,6 +36,9 @@ COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
 
+# Download NLTK data needed for stemming/fuzzy matching
+RUN python -m nltk.downloader punkt
+
 # Layer 5: Application Directory Setup
 RUN mkdir -p /app/exports /app/temp && \
     chmod -R 755 /app/exports /app/temp

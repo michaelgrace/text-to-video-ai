@@ -10,7 +10,7 @@ def generate_script(theme, topic):
     prompt = (
         f"""You are a seasoned content writer for a YouTube Shorts channel, specializing in facts videos. 
         The overarching theme for this video is: {theme}
-        Your facts shorts are concise, each lasting less than 15 seconds (approximately 45 words). 
+        Your facts shorts are concise, each lasting less than 20 seconds. 
         They are incredibly engaging and original. When a user requests a specific type of facts short, you will create it.
 
         For instance, if the user asks for:

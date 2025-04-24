@@ -42,6 +42,7 @@ def fix_json(json_str):
     return json_str
 
 def getVideoSearchQueriesTimed(script,captions_timed):
+    print("Generating search terms...")
     end = captions_timed[-1][0][1]
     try:
         
@@ -57,7 +58,7 @@ def getVideoSearchQueriesTimed(script,captions_timed):
                 out = json.loads(content)
         return out
     except Exception as e:
-        print("error in response",e)
+        print(f"Error generating search terms: {e}")
    
     return None
 

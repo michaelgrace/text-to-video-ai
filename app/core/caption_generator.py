@@ -3,11 +3,14 @@ from whisper_timestamped import load_model, transcribe_timestamped
 import re
 
 def generate_timed_captions(audio_filename,model_size="base"):
-    WHISPER_MODEL = load_model(model_size)
-   
-    gen = transcribe_timestamped(WHISPER_MODEL, audio_filename, verbose=False, fp16=False)
-   
-    return getCaptionsWithTime(gen)
+    print("Generating captions...")
+    try:
+        WHISPER_MODEL = load_model(model_size)
+        gen = transcribe_timestamped(WHISPER_MODEL, audio_filename, verbose=False, fp16=False)
+        return getCaptionsWithTime(gen)
+    except Exception as e:
+        print(f"Error generating captions: {e}")
+        raise
 
 def splitWordsBySize(words, maxCaptionSize):
    
@@ -28,6 +31,7 @@ def getTimestampMapping(whisper_analysis):
    
     index = 0
     locationToTimestamp = {}
+    print("Mapping timestamps...")
     for segment in whisper_analysis['segments']:
         for word in segment['words']:
             newIndex = index + len(word['text'])+1
@@ -48,6 +52,7 @@ def interpolateTimeFromDict(word_position, d):
 
 def getCaptionsWithTime(whisper_analysis, maxCaptionSize=50, considerPunctuation=False):
    
+    print("Processing captions with time...")
     wordLocationToTime = getTimestampMapping(whisper_analysis)
     position = 0
     start_time = 0

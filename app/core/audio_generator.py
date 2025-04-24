@@ -6,9 +6,7 @@ from app.services.kokoro_service import kokoro_client
 VOICE_PROVIDER = os.getenv('VOICE_PROVIDER', 'kokoro')  # Kokoro is default
 
 async def generate_audio(text, output_filename):
-    """Generate audio using configured provider"""
-    # logger.info(f"Generating audio using {VOICE_PROVIDER} provider")
-    
+    print("Generating audio...")
     try:
         if VOICE_PROVIDER == 'edge':
             communicate = edge_tts.Communicate(text, "en-AU-WilliamNeural")
@@ -40,7 +38,7 @@ async def generate_audio(text, output_filename):
             raise ValueError(f"Unsupported voice provider: {VOICE_PROVIDER}")
             
     except Exception as e:
-        # logger.exception(f"Error generating audio: {e}")
+        print(f"Error generating audio: {e}")
         raise
 
 

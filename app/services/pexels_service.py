@@ -22,35 +22,38 @@ def contains_negative_keyword(text):
     return False
 
 def search_videos(query_string, orientation_landscape=True, video_name=None, theme=None, topic=None, aspect_ratio=None):
-    # Always combine theme and query_string for more relevant search
-    if theme:
-        search_query = f"{theme} {query_string}"
-    else:
-        search_query = query_string
+    print(f"Searching for Pexels videos... Query: {query_string}")
+    try:
+        # Combine theme and query_string for more relevant search
+        if theme and theme.lower() not in query_string.lower():
+            search_query = f"{theme} {query_string}"
+        else:
+            search_query = query_string
 
-    url = "https://api.pexels.com/videos/search"
-    headers = {
-        "Authorization": PEXELS_API_KEY,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    }
-    params = {
-        "query": search_query,
-        "orientation": "landscape" if orientation_landscape else "portrait",
-        "per_page": 15
-    }
+        url = "https://api.pexels.com/videos/search"
+        headers = {
+            "Authorization": PEXELS_API_KEY,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        params = {
+            "query": search_query,
+            "orientation": "landscape" if orientation_landscape else "portrait",
+            "per_page": 15
+        }
 
-    # Minimal cache integration
-    ensure_cache_table()
-    cached = get_cached_response(video_name, theme, topic, aspect_ratio, query_string)
-    if cached:
-        return cached
+        # Minimal cache integration
+        ensure_cache_table()
+        cached = get_cached_response(video_name, theme, topic, aspect_ratio, query_string)
+        if cached:
+            return cached
 
-    response = requests.get(url, headers=headers, params=params)
-    json_data = response.json()
-    insert_cache(video_name, theme, topic, aspect_ratio, query_string, json_data)
-   
-    return json_data
-
+        response = requests.get(url, headers=headers, params=params)
+        json_data = response.json()
+        insert_cache(video_name, theme, topic, aspect_ratio, query_string, json_data)
+        return json_data
+    except Exception as e:
+        print(f"Error searching Pexels videos: {e}")
+        return {}
 
 def getBestVideo(
     query_string,

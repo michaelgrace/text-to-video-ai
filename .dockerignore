@@ -1,7 +1,7 @@
 # Exclude unnecessary files to speed up the build
 .git
 .github
-__pycache__
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
@@ -25,6 +25,9 @@ temp/
 *.wav
 *.mp3
 exports/logs/
-exports/
+exports/*
 data/
+logs/
+docs/
+*.log
 

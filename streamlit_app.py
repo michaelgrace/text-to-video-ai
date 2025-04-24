@@ -4,6 +4,8 @@ import os
 import time
 import json
 from pathlib import Path
+from dotenv import load_dotenv
+from datetime import datetime
 
 st.set_page_config(
     page_title="Text-To-Video AI", 
@@ -11,6 +13,10 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+# Load .env for log4UI toggle
+load_dotenv()
+LOG4UI = os.getenv("log4UI", "true").lower() == "true"
 
 # Move API keys to sidebar
 with st.sidebar:
@@ -111,6 +117,76 @@ speech_rate = st.number_input(
     format="%.1f"
 )
 
+# --- Log saving helpers ---
+def get_log_save_path(title):
+    base_dir = Path("exports/logs/video_generation")
+    base_dir.mkdir(parents=True, exist_ok=True)
+    safe_title = "".join(c for c in title if c.isalnum() or c in (' ', '_', '-')).rstrip()
+    base_name = safe_title if safe_title else "video_log"
+    filename = f"{base_name}.json"
+    i = 1
+    while (base_dir / filename).exists():
+        filename = f"{base_name}_{i}.json"
+        i += 1
+    return base_dir / filename
+
+def save_log(log_data, title):
+    log_path = get_log_save_path(title)
+    with open(log_path, "w", encoding="utf-8") as f:
+        json.dump(log_data, f, indent=2)
+    return log_path
+
+def pretty_json_or_text(line):
+    try:
+        obj = json.loads(line)
+        return json.dumps(obj, indent=2)
+    except Exception:
+        return line
+
+# --- Video output placeholder ---
+video_placeholder = st.empty()
+
+# --- Log window, progress bar, and status placeholders (always visible, below video) ---
+if LOG4UI:
+    status_placeholder = st.empty()
+    progress_placeholder = st.empty()
+    log_placeholder = st.empty()  # <-- use st.empty() for a single updatable window
+    download_log_placeholder = st.empty()
+    st.markdown(
+        """
+        <style>
+        .log-window {
+            font-family: monospace;
+            background: #181818;
+            color: #f0f0f0;
+            height: 550px;
+            overflow-y: auto;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    if "log_lines" not in st.session_state:
+        st.session_state["log_lines"] = []
+    if "log_metadata" not in st.session_state:
+        st.session_state["log_metadata"] = []
+    if "last_log_line" not in st.session_state:
+        st.session_state["last_log_line"] = ""
+    if "last_progress" not in st.session_state:
+        st.session_state["last_progress"] = 0
+    if "current_stage" not in st.session_state:
+        st.session_state["current_stage"] = ""
+    if "log_file_path" not in st.session_state:
+        st.session_state["log_file_path"] = None
+else:
+    log_placeholder = None
+    status_placeholder = None
+    progress_placeholder = None
+    download_log_placeholder = None
+
 # Process button
 if st.button("Generate Video"):
     # Prevent running if theme is blank
@@ -157,6 +233,19 @@ if st.button("Generate Video"):
                 "--title", st.session_state["video_title_input"]
             ]
 
+    # Clear log window and metadata for new run
+    if LOG4UI:
+        st.session_state["log_lines"] = []
+        st.session_state["log_metadata"] = []
+        st.session_state["last_log_line"] = ""
+        st.session_state["last_progress"] = 0
+        st.session_state["current_stage"] = ""
+        st.session_state["log_file_path"] = None
+        log_placeholder.markdown('<div class="log-window"></div>', unsafe_allow_html=True)
+        status_placeholder.info("Starting video generation...")
+        progress_placeholder.progress(0)
+        download_log_placeholder.empty()
+
     if not st.session_state["validation_msg"]:
         os.environ["VOICE_PROVIDER"] = voice_provider
         os.environ["VOICE_ID"] = voice_id
@@ -164,29 +253,93 @@ if st.button("Generate Video"):
         
         with st.spinner("Generating your video... This might take a while."):
             try:
-                # Use input_args to pass the flag if needed
-                process = subprocess.Popen(input_args, 
-                                          stdout=subprocess.PIPE, 
-                                          stderr=subprocess.PIPE,
-                                          text=True)
-                
-                # Create a placeholder for the output
-                output_placeholder = st.empty()
-                
-                # Show output in real-time
+                process = subprocess.Popen(
+                    input_args,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,
+                    universal_newlines=True
+                )
+                progress = 0
                 while True:
-                    output = process.stdout.readline()
-                    if output == '' and process.poll() is not None:
+                    line = process.stdout.readline()
+                    if line == '' and process.poll() is not None:
                         break
-                    if output:
-                        output_placeholder.text(output.strip())
-                
-                # Check if process completed successfully
+                    if not line:
+                        continue
+                    line = line.rstrip()
+                    # --- Filter progress bar lines and consecutive duplicates ---
+                    if "%|" in line:
+                        import re
+                        match = re.search(r"(\d+)%\|", line)
+                        if match:
+                            progress = int(match.group(1))
+                            if LOG4UI:
+                                progress_placeholder.progress(progress / 100)
+                        continue
+                    if line == st.session_state["last_log_line"]:
+                        continue
+                    st.session_state["last_log_line"] = line
+
+                    # --- Metadata for log ---
+                    log_entry = {
+                        "timestamp": datetime.now().isoformat(),
+                        "stage": st.session_state.get("current_stage", ""),
+                        "line": line
+                    }
+                    st.session_state["log_metadata"].append(log_entry)
+
+                    # --- Pretty-print JSON if possible ---
+                    display_line = pretty_json_or_text(line)
+
+                    # --- Detect and update stage/status ---
+                    stage_map = [
+                        ("Generating script", "Generating script with OpenAI..."),
+                        ("Generating audio", "Generating audio..."),
+                        ("Generating captions", "Generating captions..."),
+                        ("Generating search terms", "Generating search terms..."),
+                        ("Searching for Pexels", "Searching for Pexels videos..."),
+                        ("Rendering video", "Rendering video..."),
+                        ("Video generation complete", "Video generation complete!"),
+                        ("Error", "An error occurred."),
+                    ]
+                    for key, msg in stage_map:
+                        if key.lower() in line.lower():
+                            st.session_state["current_stage"] = msg
+                            if LOG4UI:
+                                if "error" in key.lower():
+                                    status_placeholder.error(msg)
+                                elif "complete" in key.lower():
+                                    status_placeholder.success(msg)
+                                else:
+                                    status_placeholder.info(msg)
+                            break
+                    # --- Append to log window ---
+                    if LOG4UI:
+                        st.session_state["log_lines"].append(display_line)
+                        log_html = (
+                            '<div class="log-window" id="logwin">'
+                            + "<br>".join(
+                                l if l.startswith("{") or l.startswith("[") or l.startswith("<pre>")
+                                else f"{l}"
+                                for l in st.session_state["log_lines"]
+                            )
+                            + "</div>"
+                            + """
+                            <script>
+                            var logwin = window.parent.document.getElementById('logwin');
+                            if(logwin){logwin.scrollTop = logwin.scrollHeight;}
+                            </script>
+                            """
+                        )
+                        log_placeholder.markdown(log_html, unsafe_allow_html=True)  # <-- always update this one placeholder
+                # --- Final status and video output ---
                 if process.returncode == 0:
                     output_file = Path("rendered_video.mp4")
                     if output_file.exists():
                         st.success("Video generated successfully!")
-                        st.video(str(output_file))
+                        video_placeholder.video(str(output_file))
                         with open(output_file, "rb") as file:
                             st.download_button(
                                 label="Download Video",
@@ -194,14 +347,53 @@ if st.button("Generate Video"):
                                 file_name="rendered_video.mp4",
                                 mime="video/mp4"
                             )
+                        if LOG4UI:
+                            status_placeholder.success("Video generation complete!")
+                            progress_placeholder.progress(1.0)
                     else:
                         st.error("Video file not found. Check the console output for details.")
+                        if LOG4UI:
+                            status_placeholder.error("Video file not found.")
                 else:
-                    error = process.stderr.read()
+                    error = process.stdout.read()
                     st.error(f"Error generating video: {error}")
-                    
+                    if LOG4UI:
+                        status_placeholder.error("Error generating video.")
+                # --- Save log to disk and show download button ---
+                if LOG4UI:
+                    log_data = {
+                        "title": st.session_state["video_title_input"],
+                        "generated_at": datetime.now().isoformat(),
+                        "log": st.session_state["log_metadata"]
+                    }
+                    log_path = save_log(log_data, st.session_state["video_title_input"])
+                    st.session_state["log_file_path"] = log_path
+                    with open(log_path, "rb") as f:
+                        download_log_placeholder.download_button(
+                            label=f"Download Log ({log_path.name})",
+                            data=f,
+                            file_name=log_path.name,
+                            mime="application/json"
+                        )
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
+                if LOG4UI:
+                    status_placeholder.error(f"An error occurred: {str(e)}")
+                    # Save log even on error
+                    log_data = {
+                        "title": st.session_state["video_title_input"],
+                        "generated_at": datetime.now().isoformat(),
+                        "log": st.session_state["log_metadata"]
+                    }
+                    log_path = save_log(log_data, st.session_state["video_title_input"])
+                    st.session_state["log_file_path"] = log_path
+                    with open(log_path, "rb") as f:
+                        download_log_placeholder.download_button(
+                            label=f"Download Log ({log_path.name})",
+                            data=f,
+                            file_name=log_path.name,
+                            mime="application/json"
+                        )
 
 st.write("---")
 st.write("### How it works")

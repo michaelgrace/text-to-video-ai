@@ -174,16 +174,28 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
         
         audio_clips = []
         audio_file_clip = AudioFileClip(audio_file_path)
+        # --- Mute/cut audio after last caption --- TEST THIS LATER IF NEEDED.
+        # if timed_captions:
+        #     last_caption_end = timed_captions[-1][0][1]
+        #     if audio_file_clip.duration > last_caption_end + 0.05:
+        #         audio_file_clip = audio_file_clip.subclip(0, last_caption_end)
         audio_clips.append(audio_file_clip)
 
         # --- Fix: Ensure last video segment covers full audio duration ---
         audio_duration = audio_file_clip.duration
         if visual_clips:
-            last_clip = visual_clips[-1]
-            if last_clip.end < audio_duration:
-                # Extend the last video segment to match audio duration
-                last_clip = last_clip.set_end(audio_duration)
-                visual_clips[-1] = last_clip
+            # Find the last non-caption visual clip
+            last_visual_idx = -1
+            for i in range(len(visual_clips)-1, -1, -1):
+                if not isinstance(visual_clips[i], TextClip):
+                    last_visual_idx = i
+                    break
+            if last_visual_idx != -1:
+                last_clip = visual_clips[last_visual_idx]
+                if last_clip.end < audio_duration:
+                    # Extend the last visual segment to match audio duration
+                    last_clip = last_clip.set_end(audio_duration)
+                    visual_clips[last_visual_idx] = last_clip
         # ---------------------------------------------------------------
 
         caption_settings = load_caption_settings()

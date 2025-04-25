@@ -16,7 +16,9 @@ def getBestVideoDiverse(
     topic=None,
     aspect_ratio=None,
     relax_filters=False,
-    relax_negative_keywords=False
+    relax_negative_keywords=False,
+    used_photo_ids=None,
+    used_photographers=None
 ):
     if used_video_ids is None:
         used_video_ids = set()
@@ -127,7 +129,9 @@ def getBestVideoDiverse(
             topic=topic,
             aspect_ratio=aspect_ratio,
             relax_filters=True,
-            relax_negative_keywords=relax_negative_keywords
+            relax_negative_keywords=relax_negative_keywords,
+            used_photo_ids=used_photo_ids,
+            used_photographers=used_photographers
         )
 
     # If still no video, try relaxing negative keywords filter
@@ -141,11 +145,24 @@ def getBestVideoDiverse(
             topic=topic,
             aspect_ratio=aspect_ratio,
             relax_filters=True,
-            relax_negative_keywords=True
+            relax_negative_keywords=True,
+            used_photo_ids=used_photo_ids,
+            used_photographers=used_photographers
         )
 
     # Fallback: Try to get a photo (with relaxed filters)
-    photo_url = select_best_photo(query_string, orientation_landscape, theme=theme, aspect_ratio=aspect_ratio)
+    if used_photo_ids is None:
+        used_photo_ids = set()
+    if used_photographers is None:
+        used_photographers = set()
+    photo_url = select_best_photo(
+        query_string,
+        orientation_landscape=orientation_landscape,
+        theme=theme,
+        aspect_ratio=aspect_ratio,
+        used_photo_ids=used_photo_ids,
+        used_photographers=used_photographers
+    )
     if photo_url:
         log_response(
             LOG_TYPE_PEXEL,
@@ -173,7 +190,7 @@ def getBestVideoDiverse(
     )
     return None, None, search_query
 
-def select_best_photo(query_string, orientation_landscape=True, theme=None, aspect_ratio="landscape"):
+def select_best_photo(query_string, orientation_landscape=True, theme=None, aspect_ratio="landscape", used_photo_ids=None, used_photographers=None):
     # Always combine theme and query_string for more relevant search
     if theme:
         search_query = f"{theme} {query_string}"
@@ -197,11 +214,20 @@ def select_best_photo(query_string, orientation_landscape=True, theme=None, aspe
             and abs(photo['height']/photo['width'] - 16/9) < 0.01
         ]
 
+    # Remove used photos and photographers
+    filtered_photos = [
+        photo for photo in filtered_photos
+        if photo['id'] not in used_photo_ids and photo['photographer'] not in used_photographers
+    ]
+
     # Sort photos by relevance
     sorted_photos = sorted(filtered_photos, key=lambda x: x.get('avg_color', ''))
 
     if sorted_photos:
-        return sorted_photos[0]['src']['original']
+        best_photo = sorted_photos[0]
+        used_photo_ids.add(best_photo['id'])
+        used_photographers.add(best_photo['photographer'])
+        return best_photo['src']['original']
     return None
 
 def generate_video_url_diverse(
@@ -211,10 +237,13 @@ def generate_video_url_diverse(
     aspect_ratio="landscape",
     video_name=None,
     topic=None,
-    render_mode="video"  # <-- new parameter
+    render_mode="video"
 ):
     timed_video_urls = []
+    # These must be reset for each new video!
     used_video_ids = set()
+    used_photo_ids = set()
+    used_photographers = set()
     if video_server == "pexel":
         for (t1, t2), search_terms in timed_video_searches:
             url = None
@@ -230,7 +259,9 @@ def generate_video_url_diverse(
                         video_name=video_name,
                         theme=theme,
                         topic=topic,
-                        aspect_ratio=aspect_ratio
+                        aspect_ratio=aspect_ratio,
+                        used_photo_ids=used_photo_ids,
+                        used_photographers=used_photographers
                     )
                     if video_url and video_id:
                         used_video_ids.add(video_id)
@@ -243,9 +274,21 @@ def generate_video_url_diverse(
                         query,
                         orientation_landscape=(aspect_ratio == "landscape"),
                         theme=theme,
-                        aspect_ratio=aspect_ratio
+                        aspect_ratio=aspect_ratio,
+                        used_photo_ids=used_photo_ids,
+                        used_photographers=used_photographers
                     )
                     if photo_url:
+                        log_response(
+                            LOG_TYPE_PEXEL,
+                            query,
+                            {
+                                "photo_fallback": True,
+                                "photo_url": photo_url,
+                                "theme": theme,
+                                "topic": topic
+                            }
+                        )
                         url = photo_url
                         is_photo = True
                         break
@@ -258,7 +301,9 @@ def generate_video_url_diverse(
                         video_name=video_name,
                         theme=theme,
                         topic=topic,
-                        aspect_ratio=aspect_ratio
+                        aspect_ratio=aspect_ratio,
+                        used_photo_ids=used_photo_ids,
+                        used_photographers=used_photographers
                     )
                     if video_url:
                         if not fallback and video_id:

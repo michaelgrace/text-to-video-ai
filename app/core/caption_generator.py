@@ -1,13 +1,39 @@
 import whisper_timestamped as whisper
 from whisper_timestamped import load_model, transcribe_timestamped
 import re
+import wave
+
+def get_audio_duration(audio_filename):
+    try:
+        with wave.open(audio_filename, 'rb') as wf:
+            frames = wf.getnframes()
+            rate = wf.getframerate()
+            return frames / float(rate)
+    except Exception:
+        return None
 
 def generate_timed_captions(audio_filename,model_size="base"):
     print("Generating captions...")
     try:
         WHISPER_MODEL = load_model(model_size)
         gen = transcribe_timestamped(WHISPER_MODEL, audio_filename, verbose=False, fp16=False)
-        return getCaptionsWithTime(gen)
+        captions = getCaptionsWithTime(gen)
+        # --- Fix: Only extend last caption if gap is small and not a duplicate or single word ---
+        audio_duration = get_audio_duration(audio_filename)
+        if captions and audio_duration:
+            last_start, last_end = captions[-1][0]
+            gap = audio_duration - last_end
+            last_text = captions[-1][1].strip()
+            # Remove duplicate last caption
+            if len(captions) > 1 and last_text == captions[-2][1].strip():
+                captions = captions[:-1]
+                last_start, last_end = captions[-1][0]
+                gap = audio_duration - last_end
+                last_text = captions[-1][1].strip()
+            # Only extend if gap is less than 0.5s and last caption is not a single word
+            if 0 < gap < 0.5 and " " in last_text:
+                captions[-1] = ((last_start, audio_duration), last_text)
+        return captions
     except Exception as e:
         print(f"Error generating captions: {e}")
         raise
@@ -75,7 +101,7 @@ def getCaptionsWithTime(whisper_analysis, maxCaptionSize=40, considerPunctuation
 
     return CaptionsPairs
 
-def merge_captions_by_duration(captions, min_segment_duration=5, max_segment_duration=10):
+def merge_captions_by_duration(captions, min_segment_duration=8, max_segment_duration=12):
     """
     Merge adjacent captions so each segment is at least min_segment_duration
     and at most max_segment_duration seconds.

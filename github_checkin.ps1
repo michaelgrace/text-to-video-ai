@@ -27,7 +27,9 @@ Pending Issues:
 - No logging of actual Pexels API queries for photos.
 - No advanced photo relevance scoring.
 - No photo API caching yet.
-"@
+"
+
+- RESTORE tag v0.8.3 -> ce347ba616e46d654f739fcc8c159778dcbf775a
 
 # Tag the commit
 git tag v0.8.3

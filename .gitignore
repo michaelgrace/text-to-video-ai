@@ -16,6 +16,8 @@ scripts/
 *.mp3
 *.wav
 
+github_*
+
 
 # Output directories
 exports/

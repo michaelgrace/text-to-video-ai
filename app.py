@@ -8,12 +8,13 @@ import whisper_timestamped as whisper
 from app.services.kokoro_service import kokoro_client
 from app.services.openai_service import generate_script
 from app.core.audio_generator import generate_audio
-from app.core.caption_generator import generate_timed_captions
+from app.core.caption_generator import generate_timed_captions, get_audio_duration
 from app.services.pexels_diversity import generate_video_url_diverse
 from app.core.render import get_output_media
 from app.core.search_generator import getVideoSearchQueriesTimed, merge_empty_intervals
 
 import argparse
+from datetime import datetime
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate a video from a topic or custom script.")
@@ -44,6 +45,28 @@ if __name__ == "__main__":
     print("Generating captions...")
     timed_captions = generate_timed_captions(SAMPLE_FILE_NAME)
     print("timed_captions:", json.dumps(timed_captions))  # Print as JSON
+
+    # --- DEBUG: Print audio duration and last caption end ---
+    audio_duration = get_audio_duration(SAMPLE_FILE_NAME)
+    print("AUDIO FILE DURATION:", audio_duration)
+    if timed_captions:
+        print("LAST CAPTION END:", timed_captions[-1][0][1])
+
+    # --- Save captions as JSON ---
+    captions_dir = "exports/logs/captions"
+    os.makedirs(captions_dir, exist_ok=True)
+    safe_title = "".join(c for c in args.title if c.isalnum() or c in (' ', '_', '-')).rstrip().replace(" ", "_")
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    captions_path = os.path.join(captions_dir, f"{timestamp}-{safe_title}.json")
+    captions_log = {
+        "title": args.title,
+        "audio_file": SAMPLE_FILE_NAME,
+        "audio_duration": audio_duration,
+        "captions": timed_captions
+    }
+    with open(captions_path, "w", encoding="utf-8") as f:
+        json.dump(captions_log, f, indent=2)
+    print(f"Saved captions log: {captions_path}")
 
     print("Generating search terms...")
     search_terms = getVideoSearchQueriesTimed(response, timed_captions)

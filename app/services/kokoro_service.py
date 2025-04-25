@@ -85,7 +85,7 @@ class KokoroServiceClient:
         self,
         text: str,
         voice: str = "af_heart",
-        response_format: str = "mp3",
+        response_format: str = "wav",
         speed: float = 1.0
     ) -> Optional[bytes]:
         """Generate speech using Kokoro Service."""
@@ -97,7 +97,7 @@ class KokoroServiceClient:
             }
             
             # Add optional parameters if they differ from defaults
-            if response_format != "mp3":
+            if response_format != "wav":
                 payload["response_format"] = response_format
             
             if speed != 1.0:

@@ -29,6 +29,8 @@ services:
       - ./streamlit_app.py:/app/streamlit_app.py
       - pip-cache:/root/.cache/pip
       - pgdata:/var/lib/postgresql/data
+      - ./audio_tts.wav:/app/audio_tts.wav
+      - ./rendered_video.mp4:/app/rendered_video.mp4
     devices:
       - /dev/dri:/dev/dri  # Add Intel GPU device access
     environment:

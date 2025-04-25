@@ -219,6 +219,20 @@ def pretty_json_or_text(line):
                 return line
     return line
 
+def sanitize_title_for_filename(title):
+    # Replace spaces with hyphens, remove illegal/special characters
+    safe = re.sub(r'[^A-Za-z0-9_\-]', '', title.replace(' ', '-'))
+    return safe if safe else "video"
+
+def get_incremented_download_name(base_name, ext=".mp4"):
+    # Only for download, not for saving on disk
+    candidate = f"{base_name}{ext}"
+    i = 1
+    while os.path.exists(candidate):
+        candidate = f"{base_name}({i}){ext}"
+        i += 1
+    return candidate
+
 # --- Video output placeholder ---
 video_placeholder = st.empty()
 
@@ -418,11 +432,15 @@ if st.button("Generate Video"):
                     if output_file.exists():
                         st.success("Video generated successfully!")
                         video_placeholder.video(str(output_file))
+                        # --- Use sanitized, incremented filename for download only ---
+                        user_title = st.session_state["video_title_input"]
+                        safe_title = sanitize_title_for_filename(user_title)
+                        download_name = get_incremented_download_name(safe_title)
                         with open(output_file, "rb") as file:
                             st.download_button(
                                 label="Download Video",
                                 data=file,
-                                file_name="rendered_video.mp4",
+                                file_name=download_name,
                                 mime="video/mp4"
                             )
                         if LOG4UI:

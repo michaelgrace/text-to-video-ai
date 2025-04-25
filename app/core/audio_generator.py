@@ -21,7 +21,7 @@ async def generate_audio(text, output_filename):
                 text=text,
                 voice=voice_id,
                 speed=speech_rate,
-                response_format="mp3"
+                response_format="wav"
             )
             if not audio_data:
                 # logger.error("Kokoro service failed to generate audio, falling back to edge-tts")

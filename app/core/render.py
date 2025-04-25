@@ -174,29 +174,7 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
         
         audio_clips = []
         audio_file_clip = AudioFileClip(audio_file_path)
-        # --- Mute/cut audio after last caption --- TEST THIS LATER IF NEEDED.
-        # if timed_captions:
-        #     last_caption_end = timed_captions[-1][0][1]
-        #     if audio_file_clip.duration > last_caption_end + 0.05:
-        #         audio_file_clip = audio_file_clip.subclip(0, last_caption_end)
         audio_clips.append(audio_file_clip)
-
-        # --- Fix: Ensure last video segment covers full audio duration ---
-        audio_duration = audio_file_clip.duration
-        if visual_clips:
-            # Find the last non-caption visual clip
-            last_visual_idx = -1
-            for i in range(len(visual_clips)-1, -1, -1):
-                if not isinstance(visual_clips[i], TextClip):
-                    last_visual_idx = i
-                    break
-            if last_visual_idx != -1:
-                last_clip = visual_clips[last_visual_idx]
-                if last_clip.end < audio_duration:
-                    # Extend the last visual segment to match audio duration
-                    last_clip = last_clip.set_end(audio_duration)
-                    visual_clips[last_visual_idx] = last_clip
-        # ---------------------------------------------------------------
 
         caption_settings = load_caption_settings()
         font = caption_settings.get("font", "Arial-Bold")
@@ -216,6 +194,8 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
                 pass
 
         for (t1, t2), text in timed_captions:
+            # Ensure no caption ends after audio
+            t2 = min(t2, audio_file_clip.duration)
             text_clip = TextClip(
                 txt=text,
                 fontsize=fontsize,
@@ -242,7 +222,11 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
         
         if audio_clips:
             audio = CompositeAudioClip(audio_clips)
-            video.duration = audio.duration
+            # Set video duration to the maximum of audio and last caption end
+            audio_duration = audio_file_clip.duration
+            last_caption_end = timed_captions[-1][0][1] if timed_captions else 0
+            final_duration = max(audio_duration, last_caption_end)
+            video = video.set_duration(final_duration)
             video.audio = audio
 
         # CPU-optimized encoding configuration

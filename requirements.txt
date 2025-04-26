@@ -17,7 +17,7 @@ idna==3.7  # Required by requests/httpx
 imageio==2.34.1
 imageio-ffmpeg==0.5.1
 loguru==0.7.2
-moviepy==1.0.3
+moviepy==2.1.2  # (updated to latest stable version)
 multidict==6.0.5  # Required by aiohttp
 nltk==3.8.1  # Required for stemming/fuzzy keyword matching
 numpy==1.26.4
@@ -49,6 +49,11 @@ urllib3==2.2.1  # Required by requests
 whisper-timestamped==1.15.4
 yarl==1.9.4  # Required by aiohttp
 
+# Additional Dependencies for Audio Duration Accuracy
+pydub==0.25.1
+mutagen==1.47.0
+audioread==3.0.1
+
 # API Development Dependencies (New)
 # fastapi==0.109.2
 # flask==3.0.2
@@ -75,3 +80,4 @@ yarl==1.9.4  # Required by aiohttp
 # scipy==1.13.1
 # sympy==1.12.1
 # whisper==20231117
+

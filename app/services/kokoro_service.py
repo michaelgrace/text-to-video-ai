@@ -93,7 +93,9 @@ class KokoroServiceClient:
             # Start with the basic payload that worked in our test
             payload = {
                 "input": text,
-                "voice": voice
+                "voice": voice,
+                "response_format": "wav",  # Ensure Kokoro returns WAV audio
+                "speed": speed
             }
             
             # Add optional parameters if they differ from defaults

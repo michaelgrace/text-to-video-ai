@@ -33,6 +33,7 @@ RUN vainfo || echo "GPU support will be verified at runtime"
 
 # Layer 4: Python Dependencies (Using cached pip)
 COPY requirements.txt .
+RUN pip install --upgrade pip
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
 

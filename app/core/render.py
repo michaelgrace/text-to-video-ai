@@ -15,10 +15,7 @@ import time
 import zipfile
 import platform
 import subprocess
-from moviepy.editor import (AudioFileClip, CompositeVideoClip, CompositeAudioClip, ImageClip,
-                            TextClip, VideoFileClip, ColorClip)
-from moviepy.audio.fx.audio_loop import audio_loop
-from moviepy.audio.fx.audio_normalize import audio_normalize
+from moviepy import AudioFileClip, CompositeVideoClip, CompositeAudioClip, ImageClip, TextClip, VideoFileClip, ColorClip
 import requests
 from PIL import Image
 
@@ -141,8 +138,8 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
                     # Optionally, infer from aspect ratio or other settings
                     pass
                 black_clip = ColorClip(size=(width, height), color=(0, 0, 0)).set_duration(t2 - t1)
-                black_clip = black_clip.set_start(t1)
-                black_clip = black_clip.set_end(t2)
+                black_clip = black_clip.with_start(t1)
+                black_clip = black_clip.with_end(t2)
                 visual_clips.append(black_clip)
                 print(f"Inserted black background for segment {t1}-{t2}")
                 continue
@@ -157,15 +154,15 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
                     print(f"Processing image for segment {t1}-{t2}: {media_url}")
                     resize_and_pad_image(media_filename, 1920, 1080)
                     image_clip = ImageClip(media_filename).set_duration(t2 - t1)
-                    image_clip = image_clip.set_start(t1)
-                    image_clip = image_clip.set_end(t2)
+                    image_clip = image_clip.with_start(t1)
+                    image_clip = image_clip.with_end(t2)
                     visual_clips.append(image_clip)
                     print(f"Used image fallback for segment {t1}-{t2}: {media_url}")
                 else:
                     # Handle as video
                     video_clip = VideoFileClip(media_filename)
-                    video_clip = video_clip.set_start(t1)
-                    video_clip = video_clip.set_end(t2)
+                    video_clip = video_clip.with_start(t1)
+                    video_clip = video_clip.with_end(t2)
                     visual_clips.append(video_clip)
             except Exception as exc:
                 print(f"Failed to open media for segment {t1}-{t2}: {media_url}")
@@ -175,9 +172,89 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
         audio_clips = []
         audio_file_clip = AudioFileClip(audio_file_path)
         audio_clips.append(audio_file_clip)
+        moviepy_duration = audio_file_clip.duration
+
+        # --- Use wave module for WAV files ---
+        wave_duration = None
+        try:
+            import wave
+            with wave.open(audio_file_path, 'rb') as wf:
+                frames = wf.getnframes()
+                rate = wf.getframerate()
+                wave_duration = frames / float(rate)
+                print(f"WAVE module audio duration: {wave_duration}")
+        except Exception as e:
+            print(f"Could not get wave audio duration: {e}")
+
+        # --- Use ffprobe ---
+        ffmpeg_duration = None
+        try:
+            import subprocess
+            ffprobe_cmd = [
+                "ffprobe", "-v", "error", "-show_entries",
+                "format=duration", "-of",
+                "default=noprint_wrappers=1:nokey=1", audio_file_path
+            ]
+            ffprobe_out = subprocess.check_output(ffprobe_cmd).decode().strip()
+            ffmpeg_duration = float(ffprobe_out)
+            print(f"FFmpeg-reported audio duration: {ffmpeg_duration}")
+        except Exception as e:
+            print(f"Could not get ffmpeg audio duration: {e}")
+
+        # --- Use pydub ---
+        pydub_duration = None
+        try:
+            from pydub import AudioSegment
+            audio = AudioSegment.from_file(audio_file_path)
+            pydub_duration = len(audio) / 1000.0
+            print(f"Pydub audio duration: {pydub_duration}")
+        except Exception as e:
+            print(f"Could not get pydub audio duration: {e}")
+
+        # --- Use audioread ---
+        audioread_duration = None
+        try:
+            import audioread
+            with audioread.audio_open(audio_file_path) as f:
+                audioread_duration = f.duration
+                print(f"Audioread audio duration: {audioread_duration}")
+        except Exception as e:
+            print(f"Could not get audioread audio duration: {e}")
+
+        # --- Use mutagen ---
+        mutagen_duration = None
+        try:
+            from mutagen import File as MutagenFile
+            mfile = MutagenFile(audio_file_path)
+            if mfile is not None and mfile.info is not None:
+                mutagen_duration = mfile.info.length
+                print(f"Mutagen audio duration: {mutagen_duration}")
+        except Exception as e:
+            print(f"Could not get mutagen audio duration: {e}")
+
+        # --- Use the maximum duration ---
+        durations = [
+            moviepy_duration, wave_duration, ffmpeg_duration,
+            pydub_duration, audioread_duration, mutagen_duration
+        ]
+        durations = [d for d in durations if d]
+        if durations:
+            audio_duration = max(durations)
+            print(f"Using max audio duration: {audio_duration}")
+        else:
+            audio_duration = moviepy_duration
+            print(f"Falling back to MoviePy audio duration: {audio_duration}")
+
+        # --- Ensure last caption extends to audio end ---
+        if timed_captions and audio_duration:
+            last_start, last_end = timed_captions[-1][0]
+            if audio_duration - last_end > 0.1:
+                print(f"Extending last caption from {last_end} to {audio_duration}")
+                timed_captions[-1] = ((last_start, audio_duration), timed_captions[-1][1])
 
         caption_settings = load_caption_settings()
-        font = caption_settings.get("font", "Arial-Bold")
+        # Use a safe default font for Docker environments
+        font = caption_settings.get("font", "DejaVuSans-Bold")
         fontsize = caption_settings.get("fontsize", 80)
         fontcolor = caption_settings.get("fontcolor", "yellow")
         stroke_color = caption_settings.get("stroke_color", "black")
@@ -197,36 +274,35 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
             # Ensure no caption ends after audio
             t2 = min(t2, audio_file_clip.duration)
             text_clip = TextClip(
-                txt=text,
-                fontsize=fontsize,
+                text=text,  # <-- MoviePy v2.x uses 'text', not 'txt'
+                font_size=fontsize,  # MoviePy v2.x: font_size not fontsize
                 color=fontcolor,
                 font=font,
                 stroke_width=stroke_width,
-                stroke_color=stroke_color,
+                stroke_color=stroke_color,  # <-- Use 'stroke_color' (American spelling)
                 method="label"
             )
             # Position logic
             if caption_position == ["center", "center"]:
-                text_clip = text_clip.set_position("center")
+                text_clip = text_clip.with_position("center")
             elif caption_position == ["center", "bottom"]:
                 # Place at bottom with margin using lambda for dynamic positioning
-                text_clip = text_clip.set_position(lambda txt: ("center", video_height - text_clip.h - caption_margin))
+                text_clip = text_clip.with_position(lambda txt: ("center", video_height - text_clip.h - caption_margin))
             else:
                 # Fallback to center
-                text_clip = text_clip.set_position("center")
-            text_clip = text_clip.set_start(t1)
-            text_clip = text_clip.set_end(t2)
+                text_clip = text_clip.with_position("center")
+            text_clip = text_clip.with_start(t1)
+            text_clip = text_clip.with_end(t2)
             visual_clips.append(text_clip)
 
+        # --- Set video duration to audio duration plus a small buffer ---
+        buffer = 0.5  # seconds, to ensure no cutoff
+        final_duration = audio_duration + buffer
+
         video = CompositeVideoClip(visual_clips)
-        
         if audio_clips:
             audio = CompositeAudioClip(audio_clips)
-            # Set video duration to the maximum of audio and last caption end
-            audio_duration = audio_file_clip.duration
-            last_caption_end = timed_captions[-1][0][1] if timed_captions else 0
-            final_duration = max(audio_duration, last_caption_end)
-            video = video.set_duration(final_duration)
+            video = video.with_duration(final_duration)
             video.audio = audio
 
         # CPU-optimized encoding configuration
@@ -246,7 +322,21 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
                 '-max_muxing_queue_size', '1024'
             ]
         )
-        
+
+        # --- FFmpeg log handling ---
+        ffmpeg_log_src = "/app/tmp/ffmpeg_report.log"
+        ffmpeg_log_dir = "exports/logs/ffmpeg"
+        if os.path.exists(ffmpeg_log_src):
+            os.makedirs(ffmpeg_log_dir, exist_ok=True)
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            log_dest = os.path.join(ffmpeg_log_dir, f"ffmpeg_{timestamp}.log")
+            try:
+                os.rename(ffmpeg_log_src, log_dest)
+                print(f"FFmpeg log saved to {log_dest}")
+            except Exception as e:
+                print(f"Failed to move FFmpeg log: {e}")
+
         # Clean up downloaded files
         for (t1, t2), media_url in background_video_data:
             media_filename = tempfile.NamedTemporaryFile(delete=False).name

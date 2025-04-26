@@ -22,12 +22,14 @@ def generate_timed_captions(audio_filename, model_size="base"):
         gen = transcribe_timestamped(WHISPER_MODEL, audio_filename, verbose=False, fp16=False)
         captions = getCaptionsWithTime(gen)
         audio_duration = get_audio_duration(audio_filename)
-        # If the last caption ends >1s before the audio ends, extend it
+        # If the last caption ends >1s before the audio ends, extend it by a small buffer, not the full gap
         if captions and audio_duration:
             last_start, last_end = captions[-1][0]
             if audio_duration - last_end > 1.0:
-                print(f"Extending last caption from {last_end} to {audio_duration}")
-                captions[-1] = ((last_start, audio_duration), captions[-1][1])
+                buffer = 0.3  # seconds
+                new_end = min(audio_duration, last_end + buffer)
+                print(f"Extending last caption from {last_end} to {new_end}")
+                captions[-1] = ((last_start, new_end), captions[-1][1])
             # Remove duplicate last caption if present
             last_text = captions[-1][1].strip()
             if len(captions) > 1 and last_text == captions[-2][1].strip():

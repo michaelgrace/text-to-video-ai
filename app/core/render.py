@@ -102,7 +102,7 @@ def load_caption_settings():
         print(f"Could not load caption settings: {e}")
         return {}
 
-def get_output_media(audio_file_path, timed_captions, background_video_data, video_server, preset='ultrafast'):
+def get_output_media(audio_file_path, timed_captions, background_video_data, video_server, preset='ultrafast', aspect_ratio='landscape'):
     print("Rendering video...")
     try:
         """
@@ -120,6 +120,14 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
         else:
             os.environ['IMAGEMAGICK_BINARY'] = '/usr/bin/convert'
         
+        # Set video dimensions based on aspect_ratio
+        if aspect_ratio == "portrait":
+            width, height = 1080, 1920
+        elif aspect_ratio == "square":
+            width, height = 1080, 1080
+        else:
+            width, height = 1920, 1080
+
         visual_clips = []
         for idx, entry in enumerate(background_video_data):
             # Support both [interval, url] and [interval, url, is_photo]
@@ -131,13 +139,7 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
 
             if media_url is None:
                 print(f"NO MEDIA URL for segment {t1}-{t2}, using black background.")
-                # Insert black background for this segment
-                # Default size: 1920x1080, adjust as needed for portrait/square
-                width, height = 1920, 1080
-                if video_server == "pexel":
-                    # Optionally, infer from aspect ratio or other settings
-                    pass
-                black_clip = ColorClip(size=(width, height), color=(0, 0, 0)).set_duration(t2 - t1)
+                black_clip = ColorClip(size=(width, height), color=(0, 0, 0)).with_duration(t2 - t1)
                 black_clip = black_clip.with_start(t1)
                 black_clip = black_clip.with_end(t2)
                 visual_clips.append(black_clip)
@@ -152,7 +154,7 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
             try:
                 if is_photo or media_url.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp')):
                     print(f"Processing image for segment {t1}-{t2}: {media_url}")
-                    resize_and_pad_image(media_filename, 1920, 1080)
+                    resize_and_pad_image(media_filename, width, height)  # Use dynamic width/height
                     image_clip = ImageClip(media_filename).set_duration(t2 - t1)
                     image_clip = image_clip.with_start(t1)
                     image_clip = image_clip.with_end(t2)
@@ -253,7 +255,7 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
                 timed_captions[-1] = ((last_start, audio_duration), timed_captions[-1][1])
 
         caption_settings = load_caption_settings()
-        # Use a safe default font for Docker environments
+        # Default settings
         font = caption_settings.get("font", "DejaVuSans-Bold")
         fontsize = caption_settings.get("fontsize", 80)
         fontcolor = caption_settings.get("fontcolor", "yellow")
@@ -261,35 +263,52 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
         stroke_width = caption_settings.get("stroke_width", 3)
         caption_position = caption_settings.get("caption_position", ["center", "bottom"])
         caption_margin = caption_settings.get("caption_margin", 80)
+        # Portrait overrides
+        if aspect_ratio == "portrait":
+            fontsize = 75
+            caption_margin = 140
+            caption_position = ["center", "bottom"]
+            text_max_width = 864  # Fixed width for wrapping
+        else:
+            text_max_width = width
 
         # After visual_clips are created, get video height for caption positioning
-        video_height = 1080  # Default fallback
-        if visual_clips:
-            try:
-                video_height = visual_clips[0].h
-            except Exception:
-                pass
+        video_height = height  # Use dynamic height for caption positioning
 
         for (t1, t2), text in timed_captions:
             # Ensure no caption ends after audio
             t2 = min(t2, audio_file_clip.duration)
             text_clip = TextClip(
-                text=text,  # <-- MoviePy v2.x uses 'text', not 'txt'
-                font_size=fontsize,  # MoviePy v2.x: font_size not fontsize
+                text=text,
+                font_size=fontsize,
                 color=fontcolor,
                 font=font,
                 stroke_width=stroke_width,
-                stroke_color=stroke_color,  # <-- Use 'stroke_color' (American spelling)
-                method="label"
+                stroke_color=stroke_color,
+                method="caption",  # <-- Use 'caption' for wrapping and margin
+                size=(text_max_width, None)  # Fixed width, allow wrapping
             )
             # Position logic
             if caption_position == ["center", "center"]:
                 text_clip = text_clip.with_position("center")
             elif caption_position == ["center", "bottom"]:
-                # Place at bottom with margin using lambda for dynamic positioning
-                text_clip = text_clip.with_position(lambda txt: ("center", video_height - text_clip.h - caption_margin))
+                if aspect_ratio == "portrait":
+                    # Align top of caption to top of bottom third
+                    text_clip = text_clip.with_position(
+                        lambda txt: (
+                            (width - text_clip.w) // 2,
+                            int(video_height * 2 / 3)
+                        )
+                    )
+                else:
+                    # Place at bottom with margin and horizontal centering
+                    text_clip = text_clip.with_position(
+                        lambda txt: (
+                            (width - text_clip.w) // 2,
+                            video_height - text_clip.h - caption_margin
+                        )
+                    )
             else:
-                # Fallback to center
                 text_clip = text_clip.with_position("center")
             text_clip = text_clip.with_start(t1)
             text_clip = text_clip.with_end(t2)

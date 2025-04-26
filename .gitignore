@@ -16,7 +16,7 @@ scripts/
 *.mp3
 *.wav
 
-github_*
+*.ps1
 
 
 # Output directories

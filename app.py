@@ -43,7 +43,7 @@ if __name__ == "__main__":
     asyncio.run(generate_audio(response, SAMPLE_FILE_NAME))
 
     print("Generating captions...")
-    timed_captions = generate_timed_captions(SAMPLE_FILE_NAME)
+    timed_captions = generate_timed_captions(SAMPLE_FILE_NAME, aspect_ratio=args.aspect_ratio)
     print("timed_captions:", json.dumps(timed_captions))  # Print as JSON
 
     # --- DEBUG: Print audio duration and last caption end ---
@@ -101,7 +101,14 @@ if __name__ == "__main__":
         background_video_urls_merged = merge_empty_intervals(background_video_urls_for_merge)
         if background_video_urls_merged is not None:
             print("Rendering video...")
-            video = get_output_media(SAMPLE_FILE_NAME, timed_captions, background_video_urls_merged, VIDEO_SERVER)
+            video = get_output_media(
+                SAMPLE_FILE_NAME,
+                timed_captions,
+                background_video_urls_merged,
+                VIDEO_SERVER,
+                preset='ultrafast',
+                aspect_ratio=args.aspect_ratio  # <-- pass aspect ratio
+            )
             print("video:", video)
         else:
             print("merge_empty_intervals returned None. Failed background_video_urls:", json.dumps(background_video_urls))

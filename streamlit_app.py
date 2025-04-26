@@ -30,7 +30,7 @@ with st.sidebar:
 st.title("Text-To-Video AI 🔥")
 st.write("Generate video from text using AI")
 
-tab_labels = ["Custom Script", "Topic"]
+tab_labels = ["Custom Script", "Topic", "Upload Audio", "Upload Background Video"]
 # Track previous tab to detect tab switch
 if "prev_tab" not in st.session_state:
     st.session_state["prev_tab"] = tab_labels[0]
@@ -62,6 +62,15 @@ elif selected_tab == "Topic":
         st.warning(st.session_state["validation_msg"])
     if topic.strip() and st.session_state["validation_msg"]:
         st.session_state["validation_msg"] = ""
+elif selected_tab == "Upload Audio":
+    uploaded_audio = st.file_uploader("Upload WAV audio file", type=["wav"], key="audio_upload")
+    title = st.text_input("Title (required)", value="", key="video_title_input")
+    if st.session_state["validation_msg"]:
+        st.warning(st.session_state["validation_msg"])
+    if uploaded_audio and st.session_state["validation_msg"]:
+        st.session_state["validation_msg"] = ""
+elif selected_tab == "Upload Background Video":
+    st.info("Background video upload is not implemented yet.")
 
 # Load voice options from schema
 schema_path = Path(__file__).parent / "app" / "schemas" / "kokoro_voices.json"
@@ -79,53 +88,69 @@ if not theme.strip():
 elif st.session_state["theme_validation_msg"]:
     st.session_state["theme_validation_msg"] = ""
 
-# Aspect ratio select box
-aspect_ratio = st.selectbox(
-    "Aspect Ratio",
-    options=["landscape", "portrait", "square"],
-    index=0,
-    key="aspect_ratio"
-)
+# --- Arrange Aspect Ratio, Rendering Mode, and Voice Provider in a single row ---
+col_ar, col_rm, col_vp = st.columns(3)
+with col_ar:
+    aspect_ratio = st.selectbox(
+        "Aspect Ratio",
+        options=["landscape", "portrait", "square"],
+        index=0,
+        key="aspect_ratio"
+    )
+with col_rm:
+    render_mode = st.selectbox(
+        "Rendering Mode",
+        options=["video", "photo", "hybrid (both)"],
+        index=0,
+        key="render_mode"
+    )
+with col_vp:
+    voice_provider = st.selectbox(
+        "Voice Provider",
+        options=["kokoro", "edge", "elevenlabs", "tiktok"],
+        index=0
+    )
 
-# Rendering mode select box
-render_mode = st.selectbox(
-    "Rendering Mode",
-    options=["video", "photo", "hybrid (both)"],
-    index=0,
-    key="render_mode"
-)
-
-# Voice control settings
-voice_provider = st.selectbox(
-    "Voice Provider",
-    options=["kokoro", "edge", "elevenlabs", "tiktok"],
-    index=0
-)
-
-language = st.selectbox(
-    "Language",
-    options=["English", "British"],
-    index=0
-)
+# --- Arrange Language, Voice, and Speech Rate in a single row ---
+col_lang, col_voice, col_rate = st.columns(3)
+with col_lang:
+    language = st.selectbox(
+        "Language",
+        options=["English", "British"],
+        index=0
+    )
 
 # Filter voices based on language selection
 filtered_voices = [v for v in available_voices if v.startswith(('af_', 'am_') if language == 'English' else ('bf_', 'bm_'))]
 
-voice_id = st.selectbox(
-    "Voice",
-    options=filtered_voices,
-    index=0,
-    format_func=lambda x: x.split('_')[1].capitalize()  # Show only the name part
-)
+with col_voice:
+    voice_id = st.selectbox(
+        "Voice",
+        options=filtered_voices,
+        index=0,
+        format_func=lambda x: x.split('_')[1].capitalize()  # Show only the name part
+    )
 
-speech_rate = st.number_input(
-    "Speech Rate (0.4 - 2.5)",
-    min_value=0.4,
-    max_value=2.5,
-    value=0.8,
-    step=0.1,
-    format="%.1f"
-)
+with col_rate:
+    speech_rate = st.number_input(
+        "Speech Rate (0.4 - 2.5)",
+        min_value=0.4,
+        max_value=2.5,
+        value=0.8,
+        step=0.1,
+        format="%.1f"
+    )
+
+# Add toggles for disabling captions and audio (show not implemented)
+col1, col2 = st.columns(2)
+with col1:
+    disable_captions = st.checkbox("Disable Captions")
+    if disable_captions:
+        st.warning("Disabling captions is not implemented yet.")
+with col2:
+    disable_audio = st.checkbox("Disable Audio")
+    if disable_audio:
+        st.warning("Disabling audio is not implemented yet.")
 
 # --- Log saving helpers ---
 def get_log_save_path(title):
@@ -293,7 +318,7 @@ if st.button("Generate Video"):
         st.warning(st.session_state["validation_msg"])
         st.stop()
     
-    # Use custom script if selected, otherwise use topic
+    # Use custom script if selected, otherwise use topic or audio
     if selected_tab == "Custom Script":
         if not st.session_state["custom_script_input"].strip():
             st.session_state["validation_msg"] = "Please add your custom script."
@@ -310,7 +335,7 @@ if st.button("Generate Video"):
                 "--custom-script",
                 "--render-mode", render_mode  # <-- pass render mode
             ]
-    else:
+    elif selected_tab == "Topic":
         if not st.session_state["topic_input"].strip():
             st.session_state["validation_msg"] = "Please add your topic."
             st.experimental_rerun()
@@ -324,6 +349,33 @@ if st.button("Generate Video"):
                 "--title", st.session_state["video_title_input"],
                 "--render-mode", render_mode  # <-- pass render mode
             ]
+    elif selected_tab == "Upload Audio":
+        if not uploaded_audio:
+            st.session_state["validation_msg"] = "Please upload a WAV audio file."
+            st.experimental_rerun()
+        elif not st.session_state["video_title_input"].strip():
+            st.session_state["validation_msg"] = "Title is required."
+            st.experimental_rerun()
+        elif not st.session_state.get("theme_input", "").strip():
+            st.session_state["theme_validation_msg"] = "Theme cannot be blank."
+            st.experimental_rerun()
+        else:
+            st.session_state["validation_msg"] = ""
+            # Save uploaded audio to disk
+            audio_save_path = "audio_uploaded.wav"
+            with open(audio_save_path, "wb") as f:
+                f.write(uploaded_audio.read())
+            input_args = [
+                "python", "app.py",
+                "--audio-file", audio_save_path,
+                "--theme", st.session_state.get("theme_input", "Add video theme"),
+                "--aspect-ratio", st.session_state["aspect_ratio"],
+                "--title", st.session_state["video_title_input"],
+                "--render-mode", render_mode
+            ]
+    elif selected_tab == "Upload Background Video":
+        st.warning("Background video upload is not implemented yet.")
+        st.stop()
 
     # Clear log window and metadata for new run
     if LOG4UI:
@@ -491,11 +543,4 @@ if st.button("Generate Video"):
                             mime="application/json"
                         )
 
-st.write("---")
-st.write("### How it works")
-st.write("""
-1. Enter your OpenAI and Pexels API keys
-2. Type in a topic for your video or enter a custom script
-3. Click 'Generate Video' and wait for the process to complete
-4. The generated video will appear below for viewing and download
-""")
+

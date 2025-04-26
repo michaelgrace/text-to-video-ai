@@ -1,6 +1,6 @@
-# PowerShell script for safe GitHub check-in (v0.8.6)
+# PowerShell script for safe GitHub check-in (v0.8.7)
 
-Write-Host "=== Text-To-Video-AI GitHub Check-in Script v0.8.6 ==="
+Write-Host "=== Text-To-Video-AI GitHub Check-in Script v0.8.7 ==="
 Write-Host "Please ensure you have a local backup of your project before proceeding."
 $backup = Read-Host "Have you created a backup? (y/n)"
 if ($backup -ne "y") {
@@ -12,7 +12,7 @@ git add .
 git status
 
 git commit -m @"
-v0.8.9 - Portrait caption alignment (top of bottom third), font/wrapping tuning, maxCaptionSize for portrait, MoviePy 2.x compatibility, config and CLI/Streamlit integration
+v0.8.7 - Portrait caption alignment (top of bottom third), font/wrapping tuning, maxCaptionSize for portrait, MoviePy 2.x compatibility, config and CLI/Streamlit integration
 
 - Portrait video rendering: Caption alignment improved—captions now align to the top of the bottom third of the video in portrait mode for better mobile readability.
 - Caption font size and wrapping further tuned for portrait mode.
@@ -26,7 +26,7 @@ PENDING/OPEN:
 - Additional review of caption splitting and edge cases for long sentences.
 "@
 
-git tag v0.8.6
+git tag v0.8.7 -m "v0.8.7 - Portrait caption alignment, font/wrapping tuning, maxCaptionSize for portrait, MoviePy 2.x compatibility, config and CLI/Streamlit integration"
 git push origin main
-git push origin v0.8.6
+git push origin v0.8.7
 git rev-parse HEAD

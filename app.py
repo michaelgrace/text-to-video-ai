@@ -18,12 +18,13 @@ from datetime import datetime
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate a video from a topic or custom script.")
-    parser.add_argument("input_text", type=str, help="The topic or custom script for the video")
+    parser.add_argument("input_text", type=str, nargs="?", help="The topic or custom script for the video")
     parser.add_argument("--theme", type=str, required=True, help="Theme for the video")
     parser.add_argument("--aspect-ratio", type=str, default="landscape", choices=["landscape", "portrait", "square"], help="Aspect ratio for the video")
     parser.add_argument("--title", type=str, required=True, help="Title (video name)")
     parser.add_argument("--custom-script", action="store_true", help="Use input as custom script (bypass OpenAI)")
     parser.add_argument("--render-mode", type=str, default="video", choices=["video", "photo", "hybrid (both)"], help="Rendering mode: video, photo, or hybrid (both)")
+    parser.add_argument("--audio-file", type=str, help="Path to user-uploaded audio file (bypass TTS)")
 
     args = parser.parse_args()
     SAMPLE_FILE_NAME = "audio_tts.wav"
@@ -31,16 +32,23 @@ if __name__ == "__main__":
 
     print("video_title:", args.title)
 
-    if args.custom_script:
-        print("Generating script (custom)...")
-        response = args.input_text
+    if args.audio_file:
+        # User uploaded audio, skip script and TTS
+        print("Using uploaded audio file:", args.audio_file)
+        SAMPLE_FILE_NAME = args.audio_file
+        # For search/captions, need a script text. Use a placeholder or empty string.
+        response = ""
     else:
-        print("Generating script with OpenAI...")
-        response = generate_script(args.theme, args.input_text)
-    print("script:", response)
+        if args.custom_script:
+            print("Generating script (custom)...")
+            response = args.input_text
+        else:
+            print("Generating script with OpenAI...")
+            response = generate_script(args.theme, args.input_text)
+        print("script:", response)
 
-    print("Generating audio...")
-    asyncio.run(generate_audio(response, SAMPLE_FILE_NAME))
+        print("Generating audio...")
+        asyncio.run(generate_audio(response, SAMPLE_FILE_NAME))
 
     print("Generating captions...")
     timed_captions = generate_timed_captions(SAMPLE_FILE_NAME, aspect_ratio=args.aspect_ratio)
@@ -69,6 +77,10 @@ if __name__ == "__main__":
     print(f"Saved captions log: {captions_path}")
 
     print("Generating search terms...")
+    # For search_terms, if response is empty (audio upload), you may want to use captions as context
+    if not response and timed_captions:
+        # Use all captions as a single string for search context
+        response = " ".join([c[1] for c in timed_captions])
     search_terms = getVideoSearchQueriesTimed(response, timed_captions)
     print("search_terms:", json.dumps(search_terms))  # Print as JSON
     print("theme:", args.theme)

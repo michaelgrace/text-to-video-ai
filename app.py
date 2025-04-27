@@ -25,6 +25,8 @@ if __name__ == "__main__":
     parser.add_argument("--custom-script", action="store_true", help="Use input as custom script (bypass OpenAI)")
     parser.add_argument("--render-mode", type=str, default="video", choices=["video", "photo", "hybrid (both)"], help="Rendering mode: video, photo, or hybrid (both)")
     parser.add_argument("--audio-file", type=str, help="Path to user-uploaded audio file (bypass TTS)")
+    parser.add_argument("--disable-captions", action="store_true", help="Do not render captions on the video")
+    parser.add_argument("--disable-audio", action="store_true", help="Do not add audio to the rendered video")
 
     args = parser.parse_args()
     SAMPLE_FILE_NAME = "audio_tts.wav"
@@ -119,7 +121,9 @@ if __name__ == "__main__":
                 background_video_urls_merged,
                 VIDEO_SERVER,
                 preset='ultrafast',
-                aspect_ratio=args.aspect_ratio  # <-- pass aspect ratio
+                aspect_ratio=args.aspect_ratio,  # <-- pass aspect ratio
+                disable_captions=getattr(args, "disable_captions", False),  # <-- pass flag
+                disable_audio=getattr(args, "disable_audio", False)         # <-- pass flag
             )
             print("video:", video)
         else:

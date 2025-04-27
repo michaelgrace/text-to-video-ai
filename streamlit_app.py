@@ -145,12 +145,8 @@ with col_rate:
 col1, col2 = st.columns(2)
 with col1:
     disable_captions = st.checkbox("Disable Captions")
-    if disable_captions:
-        st.warning("Disabling captions is not implemented yet.")
 with col2:
     disable_audio = st.checkbox("Disable Audio")
-    if disable_audio:
-        st.warning("Disabling audio is not implemented yet.")
 
 # --- Log saving helpers ---
 def get_log_save_path(title):
@@ -335,6 +331,10 @@ if st.button("Generate Video"):
                 "--custom-script",
                 "--render-mode", render_mode  # <-- pass render mode
             ]
+            if disable_captions:
+                input_args.append("--disable-captions")
+            if disable_audio:
+                input_args.append("--disable-audio")
     elif selected_tab == "Topic":
         if not st.session_state["topic_input"].strip():
             st.session_state["validation_msg"] = "Please add your topic."
@@ -349,6 +349,10 @@ if st.button("Generate Video"):
                 "--title", st.session_state["video_title_input"],
                 "--render-mode", render_mode  # <-- pass render mode
             ]
+            if disable_captions:
+                input_args.append("--disable-captions")
+            if disable_audio:
+                input_args.append("--disable-audio")
     elif selected_tab == "Upload Audio":
         if not uploaded_audio:
             st.session_state["validation_msg"] = "Please upload a WAV audio file."
@@ -373,6 +377,10 @@ if st.button("Generate Video"):
                 "--title", st.session_state["video_title_input"],
                 "--render-mode", render_mode
             ]
+            if disable_captions:
+                input_args.append("--disable-captions")
+            if disable_audio:
+                input_args.append("--disable-audio")
     elif selected_tab == "Upload Background Video":
         st.warning("Background video upload is not implemented yet.")
         st.stop()

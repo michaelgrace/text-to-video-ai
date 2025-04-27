@@ -102,7 +102,7 @@ def load_caption_settings():
         print(f"Could not load caption settings: {e}")
         return {}
 
-def get_output_media(audio_file_path, timed_captions, background_video_data, video_server, preset='ultrafast', aspect_ratio='landscape'):
+def get_output_media(audio_file_path, timed_captions, background_video_data, video_server, preset='ultrafast', aspect_ratio='landscape', disable_captions=False, disable_audio=False):
     print("Rendering video...")
     try:
         """
@@ -170,7 +170,7 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
                 print(f"Failed to open media for segment {t1}-{t2}: {media_url}")
                 print(f"Error: {exc}")
                 continue
-        
+
         audio_clips = []
         audio_file_clip = AudioFileClip(audio_file_path)
         audio_clips.append(audio_file_clip)
@@ -254,6 +254,7 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
                 print(f"Extending last caption from {last_end} to {audio_duration}")
                 timed_captions[-1] = ((last_start, audio_duration), timed_captions[-1][1])
 
+        # --- Always add captions, but make them transparent if disabled ---
         caption_settings = load_caption_settings()
         # Default settings
         font = caption_settings.get("font", "DejaVuSans-Bold")
@@ -272,6 +273,11 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
         else:
             text_max_width = width
 
+        # If captions are "disabled", make them fully transparent using RGBA
+        if disable_captions:
+            fontcolor = "rgba(0,0,0,0)"
+            stroke_color = "rgba(0,0,0,0)"
+
         # After visual_clips are created, get video height for caption positioning
         video_height = height  # Use dynamic height for caption positioning
 
@@ -285,15 +291,14 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
                 font=font,
                 stroke_width=stroke_width,
                 stroke_color=stroke_color,
-                method="caption",  # <-- Use 'caption' for wrapping and margin
-                size=(text_max_width, None)  # Fixed width, allow wrapping
+                method="caption",
+                size=(text_max_width, None)
             )
             # Position logic
             if caption_position == ["center", "center"]:
                 text_clip = text_clip.with_position("center")
             elif caption_position == ["center", "bottom"]:
                 if aspect_ratio == "portrait":
-                    # Align top of caption to top of bottom third
                     text_clip = text_clip.with_position(
                         lambda txt: (
                             (width - text_clip.w) // 2,
@@ -301,7 +306,6 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
                         )
                     )
                 else:
-                    # Place at bottom with margin and horizontal centering
                     text_clip = text_clip.with_position(
                         lambda txt: (
                             (width - text_clip.w) // 2,
@@ -316,20 +320,25 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
 
         # --- Set video duration to audio duration plus a small buffer ---
         buffer = 0.5  # seconds, to ensure no cutoff
-        final_duration = audio_duration + buffer
-
+        if 'audio_duration' in locals() and audio_duration:
+            final_duration = audio_duration + buffer
+        else:
+            final_duration = max([clip.end for clip in visual_clips])
         video = CompositeVideoClip(visual_clips)
-        if audio_clips:
+        if audio_clips and not disable_audio:
             audio = CompositeAudioClip(audio_clips)
             video = video.with_duration(final_duration)
             video.audio = audio
+        else:
+            video = video.with_duration(final_duration)
+            video = video.without_audio()
 
         # CPU-optimized encoding configuration
         threads = os.environ.get('FFMPEG_THREADS', '8')
         video.write_videofile(
             OUTPUT_FILE_NAME,
             codec='libx264',  # CPU encoder
-            audio_codec='aac',
+            audio_codec='aac' if not disable_audio else None,
             fps=25,
             preset=preset,
             ffmpeg_params=[

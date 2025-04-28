@@ -5,6 +5,7 @@ import time
 import json
 import re
 import ast
+import tempfile
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import datetime
@@ -30,7 +31,8 @@ with st.sidebar:
 st.title("Text-To-Video AI 🔥")
 st.write("Generate video from text using AI")
 
-tab_labels = ["Custom Script", "Topic", "Upload Audio", "Upload Background Video"]
+# tab_labels = ["Custom Script", "Topic", "Upload Media", "Upload Background Video"]
+tab_labels = ["Custom Script", "Topic", "Upload Audio"]
 # Track previous tab to detect tab switch
 if "prev_tab" not in st.session_state:
     st.session_state["prev_tab"] = tab_labels[0]
@@ -43,6 +45,7 @@ if "validation_msg" not in st.session_state:
 if selected_tab != st.session_state["prev_tab"]:
     st.session_state["validation_msg"] = ""
 st.session_state["prev_tab"] = selected_tab
+
 
 if selected_tab == "Custom Script":
     custom_script = st.text_area("Enter your custom script", value="", key="custom_script_input")
@@ -69,8 +72,6 @@ elif selected_tab == "Upload Audio":
         st.warning(st.session_state["validation_msg"])
     if uploaded_audio and st.session_state["validation_msg"]:
         st.session_state["validation_msg"] = ""
-elif selected_tab == "Upload Background Video":
-    st.info("Background video upload is not implemented yet.")
 
 # Load voice options from schema
 schema_path = Path(__file__).parent / "app" / "schemas" / "kokoro_voices.json"
@@ -87,6 +88,72 @@ if not theme.strip():
     st.warning(st.session_state["theme_validation_msg"])
 elif st.session_state["theme_validation_msg"]:
     st.session_state["theme_validation_msg"] = ""
+
+
+
+
+# --- Place soundtrack uploader and volume control here, standalone ---
+uploaded_soundtrack = st.file_uploader(
+    "Audio Soundtrack (optional, will loop/fade, default 10% volume)",
+    type=["mp3", "wav", "aac", "m4a", "ogg"],
+    key="soundtrack_upload"
+)
+soundtrack_path = None
+if uploaded_soundtrack is not None:
+    try:
+        soundtrack_path = os.path.join(os.getcwd(), "audio_soundtrack_uploaded.wav")
+        # Defensive: If a directory exists at this path, remove it
+        if os.path.isdir(soundtrack_path):
+            import shutil
+            shutil.rmtree(soundtrack_path)
+        # If file exists, remove it before writing
+        if os.path.exists(soundtrack_path):
+            os.remove(soundtrack_path)
+        with open(soundtrack_path, "wb") as f:
+            f.write(uploaded_soundtrack.read())
+        print(f"Soundtrack saved to: {soundtrack_path}")
+    except Exception as e:
+        st.error(f"Failed to save soundtrack: {e}")
+        soundtrack_path = None
+
+soundtrack_volume = st.number_input(
+    "Soundtrack Volume (0.0 - 1.0, default 0.1)",
+    min_value=0.0,
+    max_value=1.0,
+    value=0.5,
+    step=0.01,
+    format="%.2f",
+    key="soundtrack_volume"
+)
+
+# --- Add controls for max script duration and max words ---
+col_dur, col_words = st.columns(2)
+with col_dur:
+    max_script_duration = st.number_input(
+        "Max Script Duration (seconds)",
+        min_value=15,
+        max_value=600,
+        value=15,
+        step=15,
+        key="max_script_duration"
+    )
+with col_words:
+    max_script_words = st.number_input(
+        "Max Script Words",
+        min_value=50,
+        max_value=1000,
+        value=50,
+        step=50,
+        key="max_script_words"
+    )
+
+
+
+
+
+
+
+
 
 # --- Arrange Aspect Ratio, Rendering Mode, and Voice Provider in a single row ---
 col_ar, col_rm, col_vp = st.columns(3)
@@ -270,7 +337,7 @@ if LOG4UI:
             font-family: monospace;
             background: #181818;
             color: #f0f0f0;
-            height: 550px;
+            height: 500px;
             overflow-y: auto;
             padding: 10px;
             border-radius: 6px;
@@ -335,6 +402,8 @@ if st.button("Generate Video"):
                 input_args.append("--disable-captions")
             if disable_audio:
                 input_args.append("--disable-audio")
+            if soundtrack_path:
+                input_args += ["--soundtrack-file", soundtrack_path, "--soundtrack-volume", str(soundtrack_volume)]
     elif selected_tab == "Topic":
         if not st.session_state["topic_input"].strip():
             st.session_state["validation_msg"] = "Please add your topic."
@@ -347,12 +416,16 @@ if st.button("Generate Video"):
                 "--theme", st.session_state["theme_input"],
                 "--aspect-ratio", st.session_state["aspect_ratio"],
                 "--title", st.session_state["video_title_input"],
-                "--render-mode", render_mode  # <-- pass render mode
+                "--render-mode", render_mode,
+                "--max-seconds", str(st.session_state.get("max_script_duration", 45)),
+                "--max-words", str(st.session_state.get("max_script_words", 50))
             ]
             if disable_captions:
                 input_args.append("--disable-captions")
             if disable_audio:
                 input_args.append("--disable-audio")
+            if soundtrack_path:
+                input_args += ["--soundtrack-file", soundtrack_path, "--soundtrack-volume", str(soundtrack_volume)]
     elif selected_tab == "Upload Audio":
         if not uploaded_audio:
             st.session_state["validation_msg"] = "Please upload a WAV audio file."
@@ -377,6 +450,8 @@ if st.button("Generate Video"):
                 "--title", st.session_state["video_title_input"],
                 "--render-mode", render_mode
             ]
+            if soundtrack_path:
+                input_args += ["--soundtrack-file", soundtrack_path, "--soundtrack-volume", str(soundtrack_volume)]
             if disable_captions:
                 input_args.append("--disable-captions")
             if disable_audio:

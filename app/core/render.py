@@ -4,6 +4,7 @@ import json
 import tempfile
 import mimetypes
 from urllib.parse import urlparse
+import shutil
 
 # Add the project directory to the path to ensure imports work correctly
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -15,7 +16,15 @@ import time
 import zipfile
 import platform
 import subprocess
+# from moviepy.audio.io.AudioFileClip import AudioFileClip
+# from moviepy.audio.AudioClip import CompositeAudioClip
+# from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
+# from moviepy.video.VideoClip import ImageClip, ColorClip, TextClip
+# from moviepy.video.io.VideoFileClip import VideoFileClip
 from moviepy import AudioFileClip, CompositeVideoClip, CompositeAudioClip, ImageClip, TextClip, VideoFileClip, ColorClip
+from moviepy.audio.AudioClip import AudioArrayClip
+import numpy as np
+
 import requests
 from PIL import Image
 
@@ -102,7 +111,83 @@ def load_caption_settings():
         print(f"Could not load caption settings: {e}")
         return {}
 
-def get_output_media(audio_file_path, timed_captions, background_video_data, video_server, preset='ultrafast', aspect_ratio='landscape', disable_captions=False, disable_audio=False):
+def add_soundtrack_ffmpeg(input_video, soundtrack, output_video, volume=0.1):
+    """
+    Mixes the soundtrack into the input_video and writes to output_video.
+    - soundtrack: path to audio file (wav/mp3)
+    - volume: soundtrack volume (0.0-1.0)
+    """
+    print(f"[FFMPEG] Preparing to mix soundtrack '{soundtrack}' into '{input_video}' at volume {volume}")
+    # --- DEBUG: Check soundtrack file existence and size ---
+    if not os.path.exists(soundtrack):
+        print(f"[FFMPEG] ERROR: Soundtrack file does not exist: {soundtrack}")
+    else:
+        print(f"[FFMPEG] Soundtrack file size: {os.path.getsize(soundtrack)} bytes")
+    # --- END DEBUG ---
+    try:
+        import ffmpeg
+        probe = ffmpeg.probe(input_video)
+        duration = float(probe['format']['duration'])
+    except Exception as e:
+        print(f"[FFMPEG] Failed to probe video duration: {e}")
+        raise
+
+    # Compose FFmpeg command
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-i", input_video,
+        "-stream_loop", "-1", "-i", soundtrack,
+        "-filter_complex",
+        f"[1:a]volume={volume},atrim=duration={duration}[bg];"
+        f"[0:a][bg]amix=inputs=2:duration=first:dropout_transition=2[aout]",
+        "-map", "0:v",
+        "-map", "[aout]",
+        "-c:v", "copy",
+        "-c:a", "aac",
+        "-shortest",
+        output_video
+    ]
+    print("[FFMPEG] Running command:", " ".join(cmd))
+    try:
+        # --- DEBUG: Print working directory and file list before running FFmpeg ---
+        print("[FFMPEG] Current working directory:", os.getcwd())
+        print("[FFMPEG] Files in working directory:", os.listdir(os.getcwd()))
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        print("[FFMPEG] STDOUT:\n", result.stdout)
+        print("[FFMPEG] STDERR:\n", result.stderr)
+        # --- BEGIN: Save FFmpeg debug output to exports/logs/ffmpeg ---
+        from datetime import datetime
+        ffmpeg_log_dir = "exports/logs/ffmpeg"
+        os.makedirs(ffmpeg_log_dir, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        log_path = os.path.join(ffmpeg_log_dir, f"ffmpeg_soundtrack_{timestamp}.log")
+        with open(log_path, "w", encoding="utf-8") as f:
+            f.write("FFMPEG COMMAND:\n" + " ".join(cmd) + "\n\n")
+            f.write("STDOUT:\n" + result.stdout + "\n")
+            f.write("STDERR:\n" + result.stderr + "\n")
+        print(f"[FFMPEG] Soundtrack FFmpeg log saved to {log_path}")
+        # --- END: Save FFmpeg debug output ---
+        if result.returncode != 0:
+            print(f"[FFMPEG] FFmpeg failed with code {result.returncode}")
+            raise RuntimeError(f"FFmpeg failed: {result.stderr}")
+        print(f"[FFMPEG] Soundtrack successfully mixed to {output_video}")
+    except Exception as e:
+        print(f"[FFMPEG] Error running FFmpeg: {e}")
+        raise
+
+def get_output_media(
+    audio_file_path,
+    timed_captions,
+    background_video_data,
+    video_server,
+    preset='ultrafast',
+    aspect_ratio='landscape',
+    disable_captions=False,
+    disable_audio=False,
+    soundtrack_file=None,
+    soundtrack_volume=0.1
+):
     print("Rendering video...")
     try:
         """
@@ -317,7 +402,6 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
             text_clip = text_clip.with_start(t1)
             text_clip = text_clip.with_end(t2)
             visual_clips.append(text_clip)
-
         # --- Set video duration to audio duration plus a small buffer ---
         buffer = 0.5  # seconds, to ensure no cutoff
         if 'audio_duration' in locals() and audio_duration:
@@ -325,7 +409,22 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
         else:
             final_duration = max([clip.end for clip in visual_clips])
         video = CompositeVideoClip(visual_clips)
-        if audio_clips and not disable_audio:
+
+        # --- Ensure an audio track is present for FFmpeg mixing ---
+        need_silent_audio = False
+        if soundtrack_file:
+            # If disable_audio or audio_clips is empty, we need to add silent audio
+            if disable_audio or not audio_clips:
+                need_silent_audio = True
+
+        if need_silent_audio:
+            print("[AUDIO] Adding silent audio track for soundtrack mixing...")
+            fps = 44100
+            silent_audio = np.zeros(int(final_duration * fps), dtype=np.float32)
+            silent_clip = AudioArrayClip(silent_audio, fps=fps)
+            video = video.with_duration(final_duration)
+            video.audio = silent_clip
+        elif audio_clips and not disable_audio:
             audio = CompositeAudioClip(audio_clips)
             video = video.with_duration(final_duration)
             video.audio = audio
@@ -333,23 +432,50 @@ def get_output_media(audio_file_path, timed_captions, background_video_data, vid
             video = video.with_duration(final_duration)
             video = video.without_audio()
 
-        # CPU-optimized encoding configuration
-        threads = os.environ.get('FFMPEG_THREADS', '8')
+        # --- Write MoviePy output (captions always burned in) ---
+        temp_video_file = "temp_moviepy_output.mp4"
         video.write_videofile(
-            OUTPUT_FILE_NAME,
-            codec='libx264',  # CPU encoder
-            audio_codec='aac' if not disable_audio else None,
+            temp_video_file,
+            codec='libx264',
+            audio_codec='aac' if (not disable_audio or soundtrack_file) else None,
             fps=25,
             preset=preset,
             ffmpeg_params=[
-                '-threads', threads,
+                '-threads', os.environ.get('FFMPEG_THREADS', '8'),
                 '-preset', 'ultrafast',
-                '-crf', '28',  # Lower quality but faster encoding
+                '-crf', '28',
                 '-pix_fmt', 'yuv420p',
                 '-movflags', '+faststart',
                 '-max_muxing_queue_size', '1024'
             ]
         )
+
+        # --- If soundtrack is provided, use FFmpeg to mix it in ---
+        OUTPUT_FILE_NAME = "rendered_video.mp4"
+        if soundtrack_file:
+            print(f"[DEBUG] Checking soundtrack file: {soundtrack_file}")
+            if not os.path.exists(soundtrack_file):
+                print(f"[ERROR] Soundtrack file does not exist: {soundtrack_file}")
+            else:
+                print(f"[DEBUG] Soundtrack file size: {os.path.getsize(soundtrack_file)} bytes")
+            print(f"[DEBUG] About to call add_soundtrack_ffmpeg with: {soundtrack_file}")
+            output_with_soundtrack = OUTPUT_FILE_NAME.replace(".mp4", "_with_soundtrack.mp4")
+            try:
+                add_soundtrack_ffmpeg(
+                    input_video=temp_video_file,
+                    soundtrack=soundtrack_file,
+                    output_video=output_with_soundtrack,
+                    volume=soundtrack_volume
+                )
+                print(f"Soundtrack mixed video saved to {output_with_soundtrack}")
+                # Overwrite rendered_video.mp4 with the new file for UI compatibility
+                shutil.move(output_with_soundtrack, OUTPUT_FILE_NAME)
+                print(f"Renamed {output_with_soundtrack} to {OUTPUT_FILE_NAME} for UI compatibility")
+            except Exception as e:
+                print(f"Failed to mix soundtrack with FFmpeg: {e}")
+                shutil.move(temp_video_file, OUTPUT_FILE_NAME)
+        else:
+            shutil.move(temp_video_file, OUTPUT_FILE_NAME)
 
         # --- FFmpeg log handling ---
         ffmpeg_log_src = "/app/tmp/ffmpeg_report.log"

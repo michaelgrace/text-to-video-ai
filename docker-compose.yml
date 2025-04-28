@@ -22,15 +22,19 @@ services:
     volumes:
       - ./exports:/app/exports                 # Contains logs directory
       - ./temp:/app/temp
+      - ./tmp:/app/tmp                         # <-- ADD THIS LINE
       # - ./.logs:/app/.logs                  # Comment out or remove this line
-      - ./utility:/app/utility     # Keep original working code
+      #- ./utility:/app/utility     # Keep original working code
       - ./app:/app/app            # Add new structure
       - ./app.py:/app/app.py
       - ./streamlit_app.py:/app/streamlit_app.py
-      - pip-cache:/root/.cache/pip
-      - pgdata:/var/lib/postgresql/data
+
       - ./audio_tts.wav:/app/audio_tts.wav
       - ./rendered_video.mp4:/app/rendered_video.mp4
+      # - ./audio_soundtrack_uploaded.wav:/app/audio_soundtrack_uploaded.wav  # <-- COMMENT OUT THIS LINE
+          
+      - pip-cache:/root/.cache/pip
+      - pgdata:/var/lib/postgresql/data      
     devices:
       - /dev/dri:/dev/dri  # Add Intel GPU device access
     environment:
@@ -52,7 +56,8 @@ services:
       #- ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY}      
       - TIKTOK_SERVICE_URL=${TIKTOK_SERVICE_URL}
       #- TOGETHER_API_KEY=${TOGETHER_API_KEY}    
-      - LIBVA_DRIVER_NAME=i965  # Intel GPU driver
+      # - LIBVA_DRIVER_NAME=i965  # Intel GPU driver (comment out or remove this line)
+      - LIBVA_DRIVER_NAME=iHD    # Use iHD for Intel GPU (Gen9+)
       - LIBVA_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri
       - MESA_D3D12_DEFAULT_ADAPTER_NAME=Intel(R) UHD Graphics  # Force WSL to use Intel GPUdefault display
       - DISPLAY=${DISPLAY}
@@ -67,7 +72,8 @@ services:
       - AV_LOG_FORCE_COLOR=1
       - FFMPEG_THREADS=8
       # GPU configuration - both options available
-      - LIBVA_DRIVER_NAME=${GPU_DRIVER:-i965}  # Fallback to i965 if not set
+      #- LIBVA_DRIVER_NAME=${GPU_DRIVER:-i965}  # Fallback to i965 if not set
+      - LIBVA_DRIVER_NAME=iHD  # Use iHD for Intel GPU
       - FFMPEG_HWACCEL=vaapi
       - FFMPEG_VAAPI_DEVICE=/dev/dri/renderD128
       # Postgres environment variables

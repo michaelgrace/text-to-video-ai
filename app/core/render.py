@@ -162,6 +162,10 @@ def add_soundtrack_ffmpeg(input_video, soundtrack, output_video, volume=0.1):
         os.makedirs(ffmpeg_log_dir, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         log_path = os.path.join(ffmpeg_log_dir, f"ffmpeg_soundtrack_{timestamp}.log")
+        print(f"[DEBUG] About to write FFmpeg log to {log_path}")
+        print(f"[DEBUG] ffmpeg_log_dir exists: {os.path.exists(ffmpeg_log_dir)}")
+        print(f"[DEBUG] CWD: {os.getcwd()}")
+        print(f"[DEBUG] Directory listing for ffmpeg_log_dir: {os.listdir(ffmpeg_log_dir)}")
         with open(log_path, "w", encoding="utf-8") as f:
             f.write("FFMPEG COMMAND:\n" + " ".join(cmd) + "\n\n")
             f.write("STDOUT:\n" + result.stdout + "\n")
@@ -186,7 +190,8 @@ def get_output_media(
     disable_captions=False,
     disable_audio=False,
     soundtrack_file=None,
-    soundtrack_volume=0.1
+    soundtrack_volume=0.1,
+    background_video_file=None  # <-- new parameter
 ):
     print("Rendering video...")
     try:
@@ -214,47 +219,64 @@ def get_output_media(
             width, height = 1920, 1080
 
         visual_clips = []
-        for idx, entry in enumerate(background_video_data):
-            # Support both [interval, url] and [interval, url, is_photo]
-            if len(entry) == 3:
-                (t1, t2), media_url, is_photo = entry
-            else:
-                (t1, t2), media_url = entry
-                is_photo = False  # Default to video if not specified
 
-            if media_url is None:
-                print(f"NO MEDIA URL for segment {t1}-{t2}, using black background.")
-                black_clip = ColorClip(size=(width, height), color=(0, 0, 0)).with_duration(t2 - t1)
-                black_clip = black_clip.with_start(t1)
-                black_clip = black_clip.with_end(t2)
-                visual_clips.append(black_clip)
-                print(f"Inserted black background for segment {t1}-{t2}")
-                continue
-
-            print(f"Attempting to download and process image: {media_url}")
-            # Use correct file extension for image files
-            ext = get_extension_from_url(media_url) if (is_photo or media_url.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp'))) else ""
-            media_filename = tempfile.NamedTemporaryFile(delete=False, suffix=ext).name
-            download_file(media_url, media_filename)
-            try:
-                if is_photo or media_url.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp')):
-                    print(f"Processing image for segment {t1}-{t2}: {media_url}")
-                    resize_and_pad_image(media_filename, width, height)  # Use dynamic width/height
-                    image_clip = ImageClip(media_filename).set_duration(t2 - t1)
-                    image_clip = image_clip.with_start(t1)
-                    image_clip = image_clip.with_end(t2)
-                    visual_clips.append(image_clip)
-                    print(f"Used image fallback for segment {t1}-{t2}: {media_url}")
+        # If a background video file is provided, use it for the entire duration
+        if background_video_file and os.path.exists(background_video_file):
+            print(f"[BG VIDEO] Using uploaded background video: {background_video_file}")
+            # Determine duration from audio
+            audio_clip = AudioFileClip(audio_file_path)
+            video_clip = VideoFileClip(background_video_file)
+            # Loop or trim video to match audio duration
+            duration = audio_clip.duration
+            if video_clip.duration < duration:
+                n_loops = int(duration // video_clip.duration) + 1
+                video_clip = concatenate_videoclips([video_clip] * n_loops)
+            # video_clip = video_clip.subclip(0, duration)
+            video_clip = video_clip.subclipped(0, duration)
+            video_clip = video_clip.with_audio(None)  # Remove original audio
+            visual_clips = [video_clip]
+        else:
+            for idx, entry in enumerate(background_video_data):
+                # Support both [interval, url] and [interval, url, is_photo]
+                if len(entry) == 3:
+                    (t1, t2), media_url, is_photo = entry
                 else:
-                    # Handle as video
-                    video_clip = VideoFileClip(media_filename)
-                    video_clip = video_clip.with_start(t1)
-                    video_clip = video_clip.with_end(t2)
-                    visual_clips.append(video_clip)
-            except Exception as exc:
-                print(f"Failed to open media for segment {t1}-{t2}: {media_url}")
-                print(f"Error: {exc}")
-                continue
+                    (t1, t2), media_url = entry
+                    is_photo = False  # Default to video if not specified
+
+                if media_url is None:
+                    print(f"NO MEDIA URL for segment {t1}-{t2}, using black background.")
+                    black_clip = ColorClip(size=(width, height), color=(0, 0, 0)).with_duration(t2 - t1)
+                    black_clip = black_clip.with_start(t1)
+                    black_clip = black_clip.with_end(t2)
+                    visual_clips.append(black_clip)
+                    print(f"Inserted black background for segment {t1}-{t2}")
+                    continue
+
+                print(f"Attempting to download and process image: {media_url}")
+                # Use correct file extension for image files
+                ext = get_extension_from_url(media_url) if (is_photo or media_url.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp'))) else ""
+                media_filename = tempfile.NamedTemporaryFile(delete=False, suffix=ext).name
+                download_file(media_url, media_filename)
+                try:
+                    if is_photo or media_url.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.gif', '.webp')):
+                        print(f"Processing image for segment {t1}-{t2}: {media_url}")
+                        resize_and_pad_image(media_filename, width, height)  # Use dynamic width/height
+                        image_clip = ImageClip(media_filename).set_duration(t2 - t1)
+                        image_clip = image_clip.with_start(t1)
+                        image_clip = image_clip.with_end(t2)
+                        visual_clips.append(image_clip)
+                        print(f"Used image fallback for segment {t1}-{t2}: {media_url}")
+                    else:
+                        # Handle as video
+                        video_clip = VideoFileClip(media_filename)
+                        video_clip = video_clip.with_start(t1)
+                        video_clip = video_clip.with_end(t2)
+                        visual_clips.append(video_clip)
+                except Exception as exc:
+                    print(f"Failed to open media for segment {t1}-{t2}: {media_url}")
+                    print(f"Error: {exc}")
+                    continue
 
         audio_clips = []
         audio_file_clip = AudioFileClip(audio_file_path)

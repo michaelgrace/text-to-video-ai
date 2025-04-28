@@ -3,6 +3,8 @@
 *.env
 .archive
 .archive/
+.github
+.github/
 
 # Python
 __pycache__/
@@ -17,13 +19,13 @@ scripts/
 *.mp4
 *.mp3
 *.wav
-
 *.ps1
 
 
 # Output directories
 exports/
 temp/
+tmp/
 docs/
 config/
 .logs/
@@ -36,3 +38,4 @@ Thumbs.db
 *.dev*
 
 
+tmp/ffmpeg_report.log

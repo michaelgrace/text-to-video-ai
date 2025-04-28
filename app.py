@@ -30,7 +30,7 @@ if __name__ == "__main__":
     parser.add_argument("--disable-audio", action="store_true", help="Do not add audio to the rendered video")
     parser.add_argument("--soundtrack-file", type=str, help="Optional background soundtrack audio file")
     parser.add_argument("--soundtrack-volume", type=float, default=0.4, help="Soundtrack volume (0.0-1.0, default 0.1)")
-    # Add max-seconds and max-words arguments
+    parser.add_argument("--background-video-file", type=str, help="Optional background video file to use for the entire video")
     parser.add_argument("--max-seconds", type=int, default=30, help="Maximum duration for the script in seconds")
     parser.add_argument("--max-words", type=int, default=50, help="Maximum number of words for the script")
     args = parser.parse_args()
@@ -100,6 +100,35 @@ if __name__ == "__main__":
     print("theme:", args.theme)
     print("input_text:", args.input_text)
 
+    # --- Check for uploaded background video ---
+    if getattr(args, "background_video_file", None) and os.path.exists(args.background_video_file):
+        print(f"[BG VIDEO] Using uploaded background video: {args.background_video_file}")
+        # Generate captions as usual
+        timed_captions = generate_timed_captions(SAMPLE_FILE_NAME, aspect_ratio=args.aspect_ratio)
+        print("timed_captions:", json.dumps(timed_captions))
+        # Prepare render_kwargs as before
+        render_kwargs = dict(
+            preset='ultrafast',
+            aspect_ratio=args.aspect_ratio,
+            disable_captions=getattr(args, "disable_captions", False),
+            disable_audio=getattr(args, "disable_audio", False),
+            background_video_file=args.background_video_file
+        )
+        if getattr(args, "soundtrack_file", None):
+            print(f"Soundtrack file received: {args.soundtrack_file}")
+            render_kwargs["soundtrack_file"] = args.soundtrack_file
+            render_kwargs["soundtrack_volume"] = args.soundtrack_volume
+        # Call get_output_media with empty background_video_data
+        video = get_output_media(
+            SAMPLE_FILE_NAME,
+            timed_captions,
+            [],  # No Pexels backgrounds
+            VIDEO_SERVER,
+            **render_kwargs
+        )
+        print("video:", video)
+        exit(0)
+
     background_video_urls = None
     if search_terms is not None:
         print("Generating background video URLs...")
@@ -138,16 +167,6 @@ if __name__ == "__main__":
                 print(f"Soundtrack file received: {args.soundtrack_file}")
                 render_kwargs["soundtrack_file"] = "/app/audio_soundtrack_uploaded.wav"
                 render_kwargs["soundtrack_volume"] = args.soundtrack_volume
-            # video = get_output_media(
-            #     SAMPLE_FILE_NAME,
-            #     timed_captions,
-            #     background_video_urls_merged,
-            #     VIDEO_SERVER,
-            #     preset='ultrafast',
-            #     aspect_ratio=args.aspect_ratio,  # <-- pass aspect ratio
-            #     disable_captions=getattr(args, "disable_captions", False),  # <-- pass flag
-            #     disable_audio=getattr(args, "disable_audio", False)         # <-- pass flag
-            # )
             video = get_output_media(
                 SAMPLE_FILE_NAME,
                 timed_captions,
@@ -158,7 +177,8 @@ if __name__ == "__main__":
                 disable_captions=getattr(args, "disable_captions", False),
                 disable_audio=getattr(args, "disable_audio", False),
                 soundtrack_file=render_kwargs.get("soundtrack_file"),
-                soundtrack_volume=render_kwargs.get("soundtrack_volume")
+                soundtrack_volume=render_kwargs.get("soundtrack_volume"),
+                background_video_file=getattr(args, "background_video_file", None)
             )
             print("video:", video)
         else:

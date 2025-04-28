@@ -79,18 +79,50 @@ with open(schema_path) as f:
     voice_data = json.load(f)
     available_voices = voice_data["voices"]
 
+# --- Background video uploader ---
+uploaded_bg_video = st.file_uploader(
+    "Background Video (optional, will be used as the sole background for the entire video)",
+    type=["mp4", "mov", "avi", "mkv"],
+    key="bg_video_upload"
+)
+bg_video_path = None
+if uploaded_bg_video is not None:
+    try:
+        bg_video_path = os.path.join(os.getcwd(), "background_uploaded.mp4")
+        # Remove if a directory exists at this path
+        if os.path.isdir(bg_video_path):
+            import shutil
+            shutil.rmtree(bg_video_path)
+        # Remove if a file exists at this path
+        if os.path.isfile(bg_video_path):
+            os.remove(bg_video_path)
+        with open(bg_video_path, "wb") as f:
+            f.write(uploaded_bg_video.read())
+        print(f"Background video saved to: {bg_video_path}")
+        # --- Clear and disable theme when background video is uploaded ---
+        st.session_state["theme_input"] = ""
+        theme_disabled = True
+    except Exception as e:
+        st.error(f"Failed to save background video: {e}")
+        bg_video_path = None
+        theme_disabled = False
+else:
+    theme_disabled = False
+
 # Theme input above voice provider
-theme = st.text_input("Theme", value="Add video theme", key="theme_input")
+theme = st.text_input(
+    "Theme",
+    value=st.session_state.get("theme_input", "Add video theme"),
+    key="theme_input",
+    disabled=theme_disabled
+)
 if "theme_validation_msg" not in st.session_state:
     st.session_state["theme_validation_msg"] = ""
-if not theme.strip():
+if not theme.strip() and not theme_disabled:
     st.session_state["theme_validation_msg"] = "Theme cannot be blank."
     st.warning(st.session_state["theme_validation_msg"])
 elif st.session_state["theme_validation_msg"]:
     st.session_state["theme_validation_msg"] = ""
-
-
-
 
 # --- Place soundtrack uploader and volume control here, standalone ---
 uploaded_soundtrack = st.file_uploader(
@@ -146,14 +178,6 @@ with col_words:
         step=50,
         key="max_script_words"
     )
-
-
-
-
-
-
-
-
 
 # --- Arrange Aspect Ratio, Rendering Mode, and Voice Provider in a single row ---
 col_ar, col_rm, col_vp = st.columns(3)
@@ -368,7 +392,7 @@ else:
 # Process button
 if st.button("Generate Video"):
     # Prevent running if theme is blank
-    if not st.session_state["theme_input"].strip():
+    if not st.session_state["theme_input"].strip() and not theme_disabled:
         st.session_state["theme_validation_msg"] = "Theme cannot be blank."
         st.warning(st.session_state["theme_validation_msg"])
         st.stop()
@@ -404,6 +428,8 @@ if st.button("Generate Video"):
                 input_args.append("--disable-audio")
             if soundtrack_path:
                 input_args += ["--soundtrack-file", soundtrack_path, "--soundtrack-volume", str(soundtrack_volume)]
+            if bg_video_path:
+                input_args += ["--background-video-file", bg_video_path]
     elif selected_tab == "Topic":
         if not st.session_state["topic_input"].strip():
             st.session_state["validation_msg"] = "Please add your topic."
@@ -426,6 +452,8 @@ if st.button("Generate Video"):
                 input_args.append("--disable-audio")
             if soundtrack_path:
                 input_args += ["--soundtrack-file", soundtrack_path, "--soundtrack-volume", str(soundtrack_volume)]
+            if bg_video_path:
+                input_args += ["--background-video-file", bg_video_path]
     elif selected_tab == "Upload Audio":
         if not uploaded_audio:
             st.session_state["validation_msg"] = "Please upload a WAV audio file."
@@ -433,7 +461,7 @@ if st.button("Generate Video"):
         elif not st.session_state["video_title_input"].strip():
             st.session_state["validation_msg"] = "Title is required."
             st.experimental_rerun()
-        elif not st.session_state.get("theme_input", "").strip():
+        elif not st.session_state.get("theme_input", "").strip() and not theme_disabled:
             st.session_state["theme_validation_msg"] = "Theme cannot be blank."
             st.experimental_rerun()
         else:
@@ -456,6 +484,8 @@ if st.button("Generate Video"):
                 input_args.append("--disable-captions")
             if disable_audio:
                 input_args.append("--disable-audio")
+            if bg_video_path:
+                input_args += ["--background-video-file", bg_video_path]
     elif selected_tab == "Upload Background Video":
         st.warning("Background video upload is not implemented yet.")
         st.stop()

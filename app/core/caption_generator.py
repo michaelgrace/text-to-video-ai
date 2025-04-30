@@ -15,13 +15,16 @@ def get_audio_duration(audio_filename):
         print(f"DEBUG: Failed to get WAV duration for {audio_filename}: {e}")
         return None
 
-def generate_timed_captions(audio_filename, model_size="base", aspect_ratio="landscape"):
+def generate_timed_captions(audio_filename, model_size="base", aspect_ratio="landscape", max_caption_size=None):
     print("Generating captions...")
     try:
         WHISPER_MODEL = load_model(model_size)
         gen = transcribe_timestamped(WHISPER_MODEL, audio_filename, verbose=False, fp16=False)
-        # Set maxCaptionSize based on aspect_ratio
-        maxCaptionSize = 20 if aspect_ratio == "portrait" else 25
+        # Use provided max_caption_size if given, else default by aspect_ratio
+        if max_caption_size is not None:
+            maxCaptionSize = max_caption_size
+        else:
+            maxCaptionSize = 20 if aspect_ratio == "portrait" else 25
         captions = getCaptionsWithTime(gen, maxCaptionSize=maxCaptionSize)
         audio_duration = get_audio_duration(audio_filename)
         # If the last caption ends >1s before the audio ends, extend it by a small buffer, not the full gap

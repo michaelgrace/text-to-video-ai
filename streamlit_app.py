@@ -179,6 +179,21 @@ with col_words:
         key="max_script_words"
     )
 
+# --- Add controls for max caption size ---
+if st.session_state.get("aspect_ratio", "landscape") == "portrait":
+    default_caption_size = 20
+else:
+    default_caption_size = 25
+
+max_caption_size = st.number_input(
+    "Max Caption Size",
+    min_value=10,
+    max_value=100,
+    value=st.session_state.get("max_caption_size", default_caption_size),
+    step=1,
+    key="max_caption_size"
+)
+
 # --- Arrange Aspect Ratio, Rendering Mode, and Voice Provider in a single row ---
 col_ar, col_rm, col_vp = st.columns(3)
 with col_ar:
@@ -230,6 +245,41 @@ with col_rate:
         value=0.8,
         step=0.1,
         format="%.1f"
+    )
+
+# --- Add controls for caption font, vertical alignment, and margin ---
+col_caption_font, col_caption_align, col_caption_margin = st.columns(3)
+with col_caption_font:
+    # List available fonts (prioritize DejaVuSans-Bold, then LuckiestGuy, Arial, etc.)
+    available_fonts = [
+        "DejaVuSans-Bold",
+        "LuckiestGuy-Regular.ttf",
+        "Arial",
+        "LiberationSans-Bold",
+        "FreeSans",
+        "DejaVuSans"
+    ]
+    caption_font = st.selectbox(
+        "Caption Font",
+        options=available_fonts,
+        index=0,
+        key="caption_font"
+    )
+with col_caption_align:
+    caption_vertical_align = st.selectbox(
+        "Caption Vertical Alignment",
+        options=["bottom", "center"],
+        index=0,
+        key="caption_vertical_align"
+    )
+with col_caption_margin:
+    caption_margin = st.number_input(
+        "Caption Margin (px)",
+        min_value=0,
+        max_value=500,
+        value=st.session_state.get("caption_margin", 80),
+        step=5,
+        key="caption_margin"
     )
 
 # Add toggles for disabling captions and audio (show not implemented)
@@ -430,6 +480,12 @@ if st.button("Generate Video"):
                 input_args += ["--soundtrack-file", soundtrack_path, "--soundtrack-volume", str(soundtrack_volume)]
             if bg_video_path:
                 input_args += ["--background-video-file", bg_video_path]
+            input_args += [
+                "--caption-font", caption_font,
+                "--caption-vertical-align", st.session_state.get("caption_vertical_align", "bottom"),
+                "--caption-margin", str(st.session_state.get("caption_margin", 80)),
+                "--max-caption-size", str(st.session_state.get("max_caption_size", default_caption_size))
+            ]
     elif selected_tab == "Topic":
         if not st.session_state["topic_input"].strip():
             st.session_state["validation_msg"] = "Please add your topic."
@@ -454,6 +510,12 @@ if st.button("Generate Video"):
                 input_args += ["--soundtrack-file", soundtrack_path, "--soundtrack-volume", str(soundtrack_volume)]
             if bg_video_path:
                 input_args += ["--background-video-file", bg_video_path]
+            input_args += [
+                "--caption-font", caption_font,
+                "--caption-vertical-align", st.session_state.get("caption_vertical_align", "bottom"),
+                "--caption-margin", str(st.session_state.get("caption_margin", 80)),
+                "--max-caption-size", str(st.session_state.get("max_caption_size", default_caption_size))
+            ]
     elif selected_tab == "Upload Audio":
         if not uploaded_audio:
             st.session_state["validation_msg"] = "Please upload a WAV audio file."
@@ -486,6 +548,12 @@ if st.button("Generate Video"):
                 input_args.append("--disable-audio")
             if bg_video_path:
                 input_args += ["--background-video-file", bg_video_path]
+            input_args += [
+                "--caption-font", caption_font,
+                "--caption-vertical-align", st.session_state.get("caption_vertical_align", "bottom"),
+                "--caption-margin", str(st.session_state.get("caption_margin", 80)),
+                "--max-caption-size", str(st.session_state.get("max_caption_size", default_caption_size))
+            ]
     elif selected_tab == "Upload Background Video":
         st.warning("Background video upload is not implemented yet.")
         st.stop()
@@ -578,6 +646,8 @@ if st.button("Generate Video"):
                                     status_placeholder.success(msg)
                                 else:
                                     status_placeholder.info(msg)
+                                # Add a blank line after each stage/status change for readability
+                                st.session_state["log_lines"].append("")  # <-- line break
                             break
                     # --- Append to log window ---
                     if LOG4UI:

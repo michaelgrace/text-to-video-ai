@@ -34,6 +34,10 @@ if __name__ == "__main__":
     parser.add_argument("--background-video-file", type=str, help="Optional background video file to use for the entire video")
     parser.add_argument("--max-seconds", type=int, default=30, help="Maximum duration for the script in seconds")
     parser.add_argument("--max-words", type=int, default=50, help="Maximum number of words for the script")
+    parser.add_argument("--caption-vertical-align", type=str, default="bottom", choices=["bottom", "center"], help="Vertical alignment for captions: bottom or center")
+    parser.add_argument("--caption-margin", type=int, default=80, help="Margin (in px) from the bottom or center for captions")
+    parser.add_argument("--max-caption-size", type=int, default=None, help="Maximum caption size (characters)")
+    parser.add_argument("--caption-font", type=str, default="LuckiestGuy-Regular.ttf", help="Font filename for captions")
     args = parser.parse_args()
     SAMPLE_FILE_NAME = os.path.join(tempfile.gettempdir(), "audio_tts.wav")  # Use absolute path in Docker/Linux
     VIDEO_SERVER = "pexel"
@@ -67,7 +71,12 @@ if __name__ == "__main__":
         asyncio.run(generate_audio(response, SAMPLE_FILE_NAME))
 
     print("Generating captions...")
-    timed_captions = generate_timed_captions(SAMPLE_FILE_NAME, aspect_ratio=args.aspect_ratio)
+    max_caption_size = args.max_caption_size
+    timed_captions = generate_timed_captions(
+        SAMPLE_FILE_NAME,
+        aspect_ratio=args.aspect_ratio,
+        max_caption_size=max_caption_size
+    )
     print("timed_captions:", json.dumps(timed_captions))  # Print as JSON
     if not timed_captions:
         print("WARNING: No captions were generated!")
@@ -128,6 +137,9 @@ if __name__ == "__main__":
             timed_captions,
             [],  # No Pexels backgrounds
             VIDEO_SERVER,
+            caption_vertical_align=getattr(args, "caption_vertical_align", "bottom"),
+            caption_margin=getattr(args, "caption_margin", 80),
+            caption_font=getattr(args, "caption_font", "LuckiestGuy-Regular.ttf"),
             **render_kwargs
         )
         print("video:", video)
@@ -183,7 +195,10 @@ if __name__ == "__main__":
                 disable_audio=getattr(args, "disable_audio", False),
                 soundtrack_file=render_kwargs.get("soundtrack_file"),
                 soundtrack_volume=render_kwargs.get("soundtrack_volume"),
-                background_video_file=getattr(args, "background_video_file", None)
+                background_video_file=getattr(args, "background_video_file", None),
+                caption_font=getattr(args, "caption_font", "LuckiestGuy-Regular.ttf"),
+                caption_vertical_align=getattr(args, "caption_vertical_align", "bottom"),
+                caption_margin=getattr(args, "caption_margin", 80)
             )
             print("video:", video)
         else:

@@ -94,11 +94,13 @@ def getBestVideoDiverse(
                             LOG_TYPE_PEXEL,
                             query_string,
                             {
-                                "video_id": video["id"],
-                                "selected_video_file": video_file,
                                 "theme": theme,
-                                "topic": topic
-                            }
+                                "topic": topic,
+                                "video_id": video["id"],
+                                "selected_video_file": video_file
+                            },
+                            theme=theme,
+                            topic=topic
                         )
                         used_video_ids.add(video['id'])
                         return video_file['link'], video['id'], False
@@ -109,11 +111,13 @@ def getBestVideoDiverse(
                             LOG_TYPE_PEXEL,
                             query_string,
                             {
-                                "video_id": video["id"],
-                                "selected_video_file": video_file,
                                 "theme": theme,
-                                "topic": topic
-                            }
+                                "topic": topic,
+                                "video_id": video["id"],
+                                "selected_video_file": video_file
+                            },
+                            theme=theme,
+                            topic=topic
                         )
                         used_video_ids.add(video['id'])
                         return video_file['link'], video['id'], False
@@ -168,11 +172,13 @@ def getBestVideoDiverse(
             LOG_TYPE_PEXEL,
             query_string,
             {
-                "photo_fallback": True,
-                "photo_url": photo_url,
                 "theme": theme,
-                "topic": topic
-            }
+                "topic": topic,
+                "photo_fallback": True,
+                "photo_url": photo_url
+            },
+            theme=theme,
+            topic=topic
         )
         return photo_url, None, True
 
@@ -182,11 +188,13 @@ def getBestVideoDiverse(
         LOG_TYPE_PEXEL,
         query_string,
         {
-            "error": "No relevant video or photo found",
-            "failed_query": search_query,
             "theme": theme,
-            "topic": topic
-        }
+            "topic": topic,
+            "error": "No relevant video or photo found",
+            "failed_query": search_query
+        },
+        theme=theme,
+        topic=topic
     )
     return None, None, search_query
 
@@ -276,10 +284,10 @@ def generate_video_url_diverse(
                             LOG_TYPE_PEXEL,
                             query,
                             {
-                                "video_id": video_id,
-                                "selected_video_file": None,  # Already logged in getBestVideoDiverse, but you can add here if needed
                                 "theme": theme,
-                                "topic": topic
+                                "topic": topic,
+                                "video_id": video_id,
+                                "selected_video_file": None  # Already logged in getBestVideoDiverse, but you can add here if needed
                             },
                             title=video_name,
                             theme=theme,
@@ -301,10 +309,10 @@ def generate_video_url_diverse(
                             LOG_TYPE_PEXEL,
                             query,
                             {
-                                "photo_fallback": True,
-                                "photo_url": photo_url,
                                 "theme": theme,
-                                "topic": topic
+                                "topic": topic,
+                                "photo_fallback": True,
+                                "photo_url": photo_url
                             },
                             title=video_name,
                             theme=theme,
@@ -335,10 +343,10 @@ def generate_video_url_diverse(
                             LOG_TYPE_PEXEL,
                             query,
                             {
-                                "video_id": video_id,
-                                "selected_video_file": None,
                                 "theme": theme,
-                                "topic": topic
+                                "topic": topic,
+                                "video_id": video_id,
+                                "selected_video_file": None
                             },
                             title=video_name,
                             theme=theme,

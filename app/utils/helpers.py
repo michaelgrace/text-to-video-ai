@@ -60,18 +60,13 @@ def log_response(log_type, query, response, title=None, theme=None, topic=None, 
         with open(filepath, "w") as outfile:
             outfile.write(json.dumps(log_entry, indent=2) + '\n')
     elif log_type == LOG_TYPE_PEXEL:
-        # Deduplicate by (query, sentence)
-        key = (query, sentence)
+        key = query
         if key not in PEXEL_LOG_DEDUP:
             log_entry = {
+                "timestamp": datetime.now().isoformat(),
                 "query": query,
-                "sentence": sentence,
                 "response": response
             }
-            if theme is not None:
-                log_entry["theme"] = theme
-            if topic is not None:
-                log_entry["topic"] = topic
             PEXEL_LOG_DEDUP[key] = log_entry
 
 def finalize_pexel_recipe_log():

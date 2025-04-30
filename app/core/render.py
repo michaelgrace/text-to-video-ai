@@ -191,7 +191,10 @@ def get_output_media(
     disable_audio=False,
     soundtrack_file=None,
     soundtrack_volume=0.1,
-    background_video_file=None  # <-- new parameter
+    background_video_file=None,
+    caption_font="LuckiestGuy-Regular.ttf",   # <-- new parameter
+    caption_vertical_align="bottom",
+    caption_margin=80
 ):
     print("Rendering video...")
     try:
@@ -364,16 +367,19 @@ def get_output_media(
         # --- Always add captions, but make them transparent if disabled ---
         caption_settings = load_caption_settings()
         # Default settings
-        font = caption_settings.get("font", "DejaVuSans-Bold")
-        # Only join if not absolute
-        if font.endswith(".ttf") and not os.path.isabs(font):
-            font = os.path.join(os.getcwd(), font)
+        # Font selection logic
+        if caption_font.endswith(".ttf"):
+            font = os.path.join(os.getcwd(), "assets", "fonts", caption_font)
+        else:
+            font = caption_font  # Use as font name for system fonts (e.g., "DejaVuSans-Bold")
+        if not os.path.exists(font) and caption_font.endswith(".ttf"):
+            # fallback to config or DejaVuSans-Bold if missing
+            font = caption_settings.get("font", "DejaVuSans-Bold")
         fontsize = caption_settings.get("fontsize", 80)
         fontcolor = caption_settings.get("fontcolor", "yellow")
         stroke_color = caption_settings.get("stroke_color", "black")
         stroke_width = caption_settings.get("stroke_width", 3)
         caption_position = caption_settings.get("caption_position", ["center", "bottom"])
-        caption_margin = caption_settings.get("caption_margin", 80)
         # Portrait overrides
         if aspect_ratio == "portrait":
             fontsize = 70
@@ -404,26 +410,16 @@ def get_output_media(
                 method="caption",
                 size=(text_max_width, None)
             )
-            # Position logic
-            if caption_position == ["center", "center"]:
+            # --- Position logic ---
+            if caption_vertical_align == "center":
                 text_clip = text_clip.with_position("center")
-            elif caption_position == ["center", "bottom"]:
-                if aspect_ratio == "portrait":
-                    text_clip = text_clip.with_position(
-                        lambda txt: (
-                            (width - text_clip.w) // 2,
-                            int(video_height * 2 / 3)
-                        )
+            else:  # "bottom"
+                text_clip = text_clip.with_position(
+                    lambda txt: (
+                        (width - text_clip.w) // 2,
+                        video_height - text_clip.h - caption_margin
                     )
-                else:
-                    text_clip = text_clip.with_position(
-                        lambda txt: (
-                            (width - text_clip.w) // 2,
-                            video_height - text_clip.h - caption_margin
-                        )
-                    )
-            else:
-                text_clip = text_clip.with_position("center")
+                )
             text_clip = text_clip.with_start(t1)
             text_clip = text_clip.with_end(t2)
             visual_clips.append(text_clip)

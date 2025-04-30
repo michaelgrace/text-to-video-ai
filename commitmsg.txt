@@ -1,0 +1,9 @@
+v0.9.1 - Background Video Upload, Theme Disable, MoviePy 2.1.2 Fixes
+
+- Added support for uploading a background video, which replaces all Pexels/auto backgrounds for that run.
+- Theme input is now cleared and disabled when a background video is uploaded, as theme is irrelevant in this mode.
+- Pipeline now supports simultaneous upload of voice, soundtrack, and background video.
+- Fixed MoviePy 2.1.2 compatibility: replaced .subclip with .subclipped for background video trimming.
+- Bugfix: When background video is uploaded, Pexels search is bypassed and only the uploaded video is used.
+- All overlays (captions, audio, soundtrack) work as intended with uploaded backgrounds.
+- No pending or future items discussed in this check-in.

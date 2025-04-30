@@ -37,6 +37,9 @@ RUN pip install --upgrade pip
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
 
+# Copy custom fonts for MoviePy/PIL (ensure this path matches your repo)
+COPY assets/fonts /app/assets/fonts
+
 # Download NLTK data needed for stemming/fuzzy matching
 RUN python -m nltk.downloader punkt
 

@@ -249,9 +249,13 @@ def generate_video_url_diverse(
             url = None
             is_photo = False
             failed_query = None
+            # --- Extract the sentence fragment for this segment ---
+            # Assume search_terms is a list of queries for this segment, and you want to log the fragment that led to the first query
+            sentence_fragment = None
+            if hasattr(search_terms, '__iter__') and len(search_terms) > 0:
+                sentence_fragment = search_terms[0]  # Or use a mapping if available
             for query in search_terms:
                 if render_mode == "video":
-                    # Only allow video, no photo fallback
                     video_url, video_id, fallback = getBestVideoDiverse(
                         query,
                         orientation_landscape=(aspect_ratio == "landscape"),
@@ -267,9 +271,23 @@ def generate_video_url_diverse(
                         used_video_ids.add(video_id)
                         url = video_url
                         is_photo = False
+                        # --- Log with sentence fragment ---
+                        log_response(
+                            LOG_TYPE_PEXEL,
+                            query,
+                            {
+                                "video_id": video_id,
+                                "selected_video_file": None,  # Already logged in getBestVideoDiverse, but you can add here if needed
+                                "theme": theme,
+                                "topic": topic
+                            },
+                            title=video_name,
+                            theme=theme,
+                            topic=topic,
+                            sentence=sentence_fragment
+                        )
                         break
                 elif render_mode == "photo":
-                    # Only allow photo, never video
                     photo_url = select_best_photo(
                         query,
                         orientation_landscape=(aspect_ratio == "landscape"),
@@ -287,13 +305,16 @@ def generate_video_url_diverse(
                                 "photo_url": photo_url,
                                 "theme": theme,
                                 "topic": topic
-                            }
+                            },
+                            title=video_name,
+                            theme=theme,
+                            topic=topic,
+                            sentence=sentence_fragment
                         )
                         url = photo_url
                         is_photo = True
                         break
                 else:
-                    # hybrid (both) - keep existing logic
                     video_url, video_id, fallback = getBestVideoDiverse(
                         query,
                         orientation_landscape=(aspect_ratio == "landscape"),
@@ -310,6 +331,20 @@ def generate_video_url_diverse(
                             used_video_ids.add(video_id)
                         url = video_url
                         is_photo = (video_id is None and video_url is not None)
+                        log_response(
+                            LOG_TYPE_PEXEL,
+                            query,
+                            {
+                                "video_id": video_id,
+                                "selected_video_file": None,
+                                "theme": theme,
+                                "topic": topic
+                            },
+                            title=video_name,
+                            theme=theme,
+                            topic=topic,
+                            sentence=sentence_fragment
+                        )
                         break
                     elif fallback and isinstance(fallback, str):
                         failed_query = fallback

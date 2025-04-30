@@ -15,6 +15,7 @@ async def generate_audio(text, output_filename):
         elif VOICE_PROVIDER == 'kokoro':
             voice_id = os.getenv('VOICE_ID', 'af_heart')
             speech_rate = float(os.getenv('SPEECH_RATE', '0.8'))
+            print(f"[DEBUG] Using Kokoro TTS voice: {voice_id}, speech_rate: {speech_rate}")
             
             # logger.debug(f"Using Kokoro TTS for: {text[:50]}...")
             audio_data = await kokoro_client.create_speech(

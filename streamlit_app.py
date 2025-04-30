@@ -508,6 +508,12 @@ if st.button("Generate Video"):
         os.environ["VOICE_ID"] = voice_id
         os.environ["SPEECH_RATE"] = str(speech_rate)
         
+        # --- Pass updated environment to subprocess ---
+        sub_proc = os.environ.copy()
+        sub_proc["VOICE_PROVIDER"] = voice_provider
+        sub_proc["VOICE_ID"] = voice_id
+        sub_proc["SPEECH_RATE"] = str(speech_rate)
+
         with st.spinner("Generating your video... This might take a while."):
             try:
                 process = subprocess.Popen(
@@ -516,7 +522,8 @@ if st.button("Generate Video"):
                     stderr=subprocess.STDOUT,
                     text=True,
                     bufsize=1,
-                    universal_newlines=True
+                    universal_newlines=True,
+                    env=sub_proc  # <-- renamed from env to sub_proc
                 )
                 progress = 0
                 while True:

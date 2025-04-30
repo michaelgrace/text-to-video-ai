@@ -13,6 +13,7 @@ from app.core.caption_generator import generate_timed_captions, get_audio_durati
 from app.services.pexels_diversity import generate_video_url_diverse
 from app.core.render import get_output_media
 from app.core.search_generator import getVideoSearchQueriesTimed, merge_empty_intervals
+from app.utils.helpers import start_pexel_recipe_log, finalize_pexel_recipe_log
 
 import argparse
 from datetime import datetime
@@ -38,6 +39,9 @@ if __name__ == "__main__":
     VIDEO_SERVER = "pexel"
 
     print("video_title:", args.title)
+
+    # Start a new Pexels log file for this run
+    start_pexel_recipe_log(args.title)
 
     if args.audio_file:
         # User uploaded audio, skip script and TTS
@@ -127,6 +131,7 @@ if __name__ == "__main__":
             **render_kwargs
         )
         print("video:", video)
+        finalize_pexel_recipe_log()
         exit(0)
 
     background_video_urls = None
@@ -187,3 +192,5 @@ if __name__ == "__main__":
     else:
         print("background_video_urls is None. Failed search_terms:", json.dumps(search_terms))
         print("Query context - theme:", args.theme, "input_text:", args.input_text)
+
+    finalize_pexel_recipe_log()

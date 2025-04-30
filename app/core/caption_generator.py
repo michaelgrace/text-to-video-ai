@@ -21,7 +21,7 @@ def generate_timed_captions(audio_filename, model_size="base", aspect_ratio="lan
         WHISPER_MODEL = load_model(model_size)
         gen = transcribe_timestamped(WHISPER_MODEL, audio_filename, verbose=False, fp16=False)
         # Set maxCaptionSize based on aspect_ratio
-        maxCaptionSize = 20 if aspect_ratio == "portrait" else 30
+        maxCaptionSize = 20 if aspect_ratio == "portrait" else 25
         captions = getCaptionsWithTime(gen, maxCaptionSize=maxCaptionSize)
         audio_duration = get_audio_duration(audio_filename)
         # If the last caption ends >1s before the audio ends, extend it by a small buffer, not the full gap

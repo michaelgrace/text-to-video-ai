@@ -1,0 +1,6 @@
+{
+    "python.analysis.exclude": ["**/venv/**", "**/__pycache__/**", "**/site-packages/**"],
+    "python.analysis.indexing": false,  // Disables indexing
+    "python.analysis.diagnosticMode": "workspace", // Limits diagnostics to the workspace
+    "python.analysis.memory.limit": 512 // Limits memory usage for Pylance
+}

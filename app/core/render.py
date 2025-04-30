@@ -365,6 +365,9 @@ def get_output_media(
         caption_settings = load_caption_settings()
         # Default settings
         font = caption_settings.get("font", "DejaVuSans-Bold")
+        # Only join if not absolute
+        if font.endswith(".ttf") and not os.path.isabs(font):
+            font = os.path.join(os.getcwd(), font)
         fontsize = caption_settings.get("fontsize", 80)
         fontcolor = caption_settings.get("fontcolor", "yellow")
         stroke_color = caption_settings.get("stroke_color", "black")
@@ -373,7 +376,7 @@ def get_output_media(
         caption_margin = caption_settings.get("caption_margin", 80)
         # Portrait overrides
         if aspect_ratio == "portrait":
-            fontsize = 75
+            fontsize = 70
             caption_margin = 140
             caption_position = ["center", "bottom"]
             text_max_width = 864  # Fixed width for wrapping
